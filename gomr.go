@@ -50,7 +50,7 @@ func Run(nMap, nRed int, m Mapper, p Partitioner, r Reducer) (inMap, outRed chan
 
 	go func() {
 		wgMap.Wait()
-		for i := 0; i < nMap; i++ {
+		for i := 0; i < nRed; i++ {
 			close(inRed[i])
 		}
 
