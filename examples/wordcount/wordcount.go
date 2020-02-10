@@ -19,8 +19,7 @@ type Count struct {
 
 func (w *WordCount) Map(in <-chan interface{}, out chan<- interface{}) {
 	for elem := range in {
-		word := elem.(string)
-		out <- Count{word, 1}
+		out <- elem
 	}
 
 	close(out)
@@ -28,10 +27,10 @@ func (w *WordCount) Map(in <-chan interface{}, out chan<- interface{}) {
 
 func (w *WordCount) Partition(in <-chan interface{}, outs []chan interface{}, wg *sync.WaitGroup) {
 	for elem := range in {
-		count := elem.(Count)
+		key := elem.(string)
 
 		h := sha1.New()
-		h.Write([]byte(count.Key))
+		h.Write([]byte(key))
 		hash := int(binary.BigEndian.Uint64(h.Sum(nil)))
 		if hash < 0 {
 			hash = hash * -1
@@ -47,8 +46,8 @@ func (w *WordCount) Reduce(in <-chan interface{}, out chan<- interface{}, wg *sy
 	counts := make(map[string]int)
 
 	for elem := range in {
-		count := elem.(Count)
-		counts[count.Key]++
+		key := elem.(string)
+		counts[key]++
 	}
 
 	for k, v := range counts {
@@ -59,7 +58,7 @@ func (w *WordCount) Reduce(in <-chan interface{}, out chan<- interface{}, wg *sy
 }
 
 func main() {
-	data := "hello world this is a body of text text world hello a boy"
+	data := "hello world\nthis is a body of text\ntext world hello a boy"
 	wc := &WordCount{}
 
 	fmt.Println(data)
