@@ -10,7 +10,7 @@ const (
 )
 
 type Mapper interface {
-	Map(in <-chan interface{}, out chan<- interface{}, wg *sync.WaitGroup)
+	Map(in <-chan interface{}, out chan<- interface{})
 }
 
 type Partitioner interface {
@@ -44,7 +44,7 @@ func Run(nMap, nRed int, m Mapper, p Partitioner, r Reducer) (inMap, outRed chan
 
 	for i := 0; i < nMap; i++ {
 		inPar[i] = make(chan interface{}, CHANBUF)
-		go m.Map(inMap, inPar[i], &wgMap)
+		go m.Map(inMap, inPar[i])
 		go p.Partition(inPar[i], inRed, &wgMap)
 	}
 
