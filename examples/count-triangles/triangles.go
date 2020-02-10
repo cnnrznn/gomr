@@ -10,8 +10,8 @@ import (
 	"strings"
 	"sync"
 
-	. "github.com/cnnrznn/cs6240/triangles/edge"
 	"github.com/cnnrznn/gomr"
+	. "github.com/cnnrznn/gomr/examples/edge"
 )
 
 const (
@@ -23,7 +23,7 @@ type EdgeToTables struct {
 	edges map[Edge]bool
 }
 
-func (e *EdgeToTables) Map(in <-chan interface{}, out chan<- interface{}, wg *sync.WaitGroup) {
+func (e *EdgeToTables) Map(in <-chan interface{}, out chan<- interface{}) {
 	for elem := range in {
 		edge := elem.(Edge)
 		//fmt.Println(edge)

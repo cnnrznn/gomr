@@ -11,6 +11,7 @@ import (
 	"sync"
 
 	"github.com/cnnrznn/gomr"
+	. "github.com/cnnrznn/gomr/examples/edge"
 )
 
 const (
