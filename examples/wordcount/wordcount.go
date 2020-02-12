@@ -1,9 +1,12 @@
 package main
 
 import (
+	"bufio"
 	"crypto/sha1"
 	"encoding/binary"
-	"fmt"
+	"log"
+	"os"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -19,7 +22,9 @@ type Count struct {
 
 func (w *WordCount) Map(in <-chan interface{}, out chan<- interface{}) {
 	for elem := range in {
-		out <- elem
+		for _, word := range strings.Split(elem.(string), " ") {
+			out <- word
+		}
 	}
 
 	close(out)
@@ -36,7 +41,7 @@ func (w *WordCount) Partition(in <-chan interface{}, outs []chan interface{}, wg
 			hash = hash * -1
 		}
 
-		outs[hash%len(outs)] <- count
+		outs[hash%len(outs)] <- key
 	}
 
 	wg.Done()
@@ -58,19 +63,28 @@ func (w *WordCount) Reduce(in <-chan interface{}, out chan<- interface{}, wg *sy
 }
 
 func main() {
-	data := "hello world\nthis is a body of text\ntext world hello a boy"
 	wc := &WordCount{}
+	par, _ := strconv.Atoi(os.Args[2])
 
-	fmt.Println(data)
+	in, out := gomr.Run(par, par, wc, wc, wc)
 
-	in, out := gomr.Run(5, 5, wc, wc, wc)
-
-	for _, word := range strings.Split(data, " ") {
-		in <- word
+	file, err := os.Open(os.Args[1])
+	if err != nil {
+		log.Fatal(err)
 	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	log.Println("Started scanning")
+	for scanner.Scan() {
+		in <- scanner.Text()
+	}
+	log.Println("Finished scanning")
 	close(in)
 
-	for count := range out {
-		fmt.Println(count)
+	for _ = range out {
+		//fmt.Println(count)
 	}
+
+	log.Println("Wordcount done!")
 }
