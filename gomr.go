@@ -1,6 +1,7 @@
 package gomr
 
 import (
+	"bytes"
 	"log"
 	"sync"
 )
@@ -21,14 +22,31 @@ type Reducer interface {
 	Reduce(in <-chan interface{}, out chan<- interface{}, wg *sync.WaitGroup)
 }
 
+func TextFile(fn string, inMaps []chan interface{}) {
+	file, _ := os.Open(fn)
+	defer file.Close()
+	size, _ := f.Stat().Size()
+	nChunks := len(inMaps)
+	chunkSize := math.Ceil(float64(size) / float64(nChunks))
+
+	for i := 0; i < nChunks; i++ {
+		go func() {
+			file.Seek(chunkSize * i)
+			buff := make([]byte, chunkSize)
+			count, _ := file.Read(buff)
+		}()
+	}
+}
+
 /*
  * Architect and MapReduce Job with the following number of mappers and
  * reducers. Return to the user a channel for intputing their data
  */
-func Run(nMap, nRed int, m Mapper, p Partitioner, r Reducer) (inMap, outRed chan interface{}) {
+func Run(nMap, nRed int, m Mapper, p Partitioner, r Reducer) (inMaps []chan interface{},
+	outRed chan interface{}) {
 	log.Println("Architecting...")
 
-	inMap = make(chan interface{}, nMap*CHANBUF)
+	inMaps = make([]chan interface{}, nMap)
 	inPar := make([]chan interface{}, nMap)
 	inRed := make([]chan interface{}, nRed)
 	outRed = make(chan interface{})
@@ -43,6 +61,7 @@ func Run(nMap, nRed int, m Mapper, p Partitioner, r Reducer) (inMap, outRed chan
 	}
 
 	for i := 0; i < nMap; i++ {
+		inMap[i] = make(chan interface{}, CHANBUF)
 		inPar[i] = make(chan interface{}, CHANBUF)
 		go m.Map(inMap, inPar[i])
 		go p.Partition(inPar[i], inRed, &wgMap)
@@ -58,5 +77,5 @@ func Run(nMap, nRed int, m Mapper, p Partitioner, r Reducer) (inMap, outRed chan
 		close(outRed)
 	}()
 
-	return inMap, outRed
+	return
 }

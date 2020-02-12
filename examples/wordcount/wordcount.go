@@ -66,7 +66,8 @@ func main() {
 	wc := &WordCount{}
 	par, _ := strconv.Atoi(os.Args[2])
 
-	in, out := gomr.Run(par, par, wc, wc, wc)
+	ins, out := gomr.Run(par, par, wc, wc, wc)
+	gomr.TextFile(os.Args[1], ins)
 
 	file, err := os.Open(os.Args[1])
 	if err != nil {
