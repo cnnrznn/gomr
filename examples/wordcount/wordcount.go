@@ -1,9 +1,9 @@
 package main
 
 import (
-	"bufio"
 	"crypto/sha1"
 	"encoding/binary"
+	//"fmt"
 	"log"
 	"os"
 	"strconv"
@@ -69,19 +69,19 @@ func main() {
 	ins, out := gomr.Run(par, par, wc, wc, wc)
 	gomr.TextFile(os.Args[1], ins)
 
-	file, err := os.Open(os.Args[1])
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer file.Close()
+	//file, err := os.Open(os.Args[1])
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+	//defer file.Close()
 
-	scanner := bufio.NewScanner(file)
-	log.Println("Started scanning")
-	for scanner.Scan() {
-		in <- scanner.Text()
-	}
-	log.Println("Finished scanning")
-	close(in)
+	//scanner := bufio.NewScanner(file)
+	//log.Println("Started scanning")
+	//for scanner.Scan() {
+	//	in <- scanner.Text()
+	//}
+	//log.Println("Finished scanning")
+	//close(in)
 
 	for _ = range out {
 		//fmt.Println(count)
