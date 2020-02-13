@@ -1,16 +1,16 @@
 package main
 
 import (
+	"bufio"
 	"crypto/sha1"
 	"encoding/binary"
-	//"fmt"
+	"fmt"
+	"github.com/cnnrznn/gomr"
 	"log"
 	"os"
 	"strconv"
 	"strings"
 	"sync"
-
-	"github.com/cnnrznn/gomr"
 )
 
 type WordCount struct{}
@@ -18,6 +18,10 @@ type WordCount struct{}
 type Count struct {
 	Key   string
 	Value int
+}
+
+func (c Count) String() string {
+	return fmt.Sprintf("%v %v", c.Key, c.Value)
 }
 
 func (w *WordCount) Map(in <-chan interface{}, out chan<- interface{}) {
@@ -66,25 +70,26 @@ func main() {
 	wc := &WordCount{}
 	par, _ := strconv.Atoi(os.Args[2])
 
-	ins, out := gomr.Run(par, par, wc, wc, wc)
-	gomr.TextFile(os.Args[1], ins)
+	in, out := gomr.Run(par, par, wc, wc, wc)
+	//gomr.TextFile(os.Args[1], ins)
 
-	//file, err := os.Open(os.Args[1])
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-	//defer file.Close()
+	file, err := os.Open(os.Args[1])
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
 
-	//scanner := bufio.NewScanner(file)
-	//log.Println("Started scanning")
-	//for scanner.Scan() {
-	//	in <- scanner.Text()
-	//}
-	//log.Println("Finished scanning")
-	//close(in)
+	scanner := bufio.NewScanner(file)
+	log.Println("Started scanning")
+	for scanner.Scan() {
+		in <- scanner.Text()
+	}
+	log.Println("Finished scanning")
+	close(in)
 
-	for _ = range out {
-		//fmt.Println(count)
+	for count := range out {
+		//for _ = range out {
+		fmt.Println(count)
 	}
 
 	log.Println("Wordcount done!")
