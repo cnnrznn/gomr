@@ -18,4 +18,4 @@ if __name__ == "__main__":
               .reduceByKey(lambda a, b: a + b, int(parallelism))
 
     for count in words.collect():
-        print(count)
+        print("{} {}".format(count[0].encode('utf-8'), count[1]))
