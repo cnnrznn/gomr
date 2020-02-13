@@ -2,9 +2,8 @@ package gomr
 
 import (
 	"bufio"
-	"bytes"
 	"log"
-	"math"
+	//"math"
 	"os"
 	"sync"
 )
@@ -26,31 +25,49 @@ type Reducer interface {
 }
 
 func TextFile(fn string, inMap []chan interface{}) {
+	par := len(inMap)
+
 	file, _ := os.Open(fn)
 	defer file.Close()
-	stat, _ := file.Stat()
-	size := stat.Size()
-	nChunks := len(inMap)
-	chunkSize := int(math.Ceil(float64(size) / float64(nChunks)))
 
-	for i := 0; i < nChunks; i++ {
-		go func(i int) {
-			file, _ := os.Open(fn)
-			defer file.Close()
-			file.Seek(int64(chunkSize*i), 0)
-			buff := make([]byte, chunkSize)
-			file.Read(buff)
-			log.Printf("File read %v done.\n", i)
-
-			scanner := bufio.NewScanner(bytes.NewReader(buff))
-			for scanner.Scan() {
-				inMap[i] <- scanner.Text()
-			}
-
-			close(inMap[i])
-			log.Printf("File scan %v done.\n", i)
-		}(i)
+	scanner := bufio.NewScanner(file)
+	for dest := 0; scanner.Scan(); dest = (dest + 1) % par {
+		inMap[dest] <- scanner.Text()
 	}
+
+	for _, ch := range inMap {
+		close(ch)
+	}
+
+	//stat, _ := file.Stat()
+	//size := stat.Size()
+	//nChunks := len(inMap)
+	//chunkSize := int(math.Ceil(float64(size) / float64(nChunks)))
+
+	//for i := 0; i < nChunks; i++ {
+	//	go func(i int) {
+	//		file, _ := os.Open(fn)
+	//		defer file.Close()
+	//		_, err := file.Seek(int64(chunkSize*i), 0)
+	//		if err != nil {
+	//			log.Println(err)
+	//		}
+
+	//		scanner := bufio.NewScanner(file)
+	//		if i > 0 {
+	//			scanner.Scan()
+	//		}
+
+	//		nRead := 0
+	//		for scanner.Scan() && nRead < chunkSize {
+	//			inMap[i] <- scanner.Text()
+	//			nRead += len(scanner.Text())
+	//		}
+
+	//		close(inMap[i])
+	//		log.Printf("File scan %v done.\n", i)
+	//	}(i)
+	//}
 }
 
 /*
