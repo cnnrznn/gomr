@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"github.com/cnnrznn/gomr"
+	"io/ioutil"
 	"log"
 	"os"
 	"strconv"
@@ -66,6 +67,7 @@ func (w *WordCount) Reduce(in <-chan interface{}, out chan<- interface{}, wg *sy
 }
 
 func main() {
+	log.SetOutput(ioutil.Discard)
 	wc := &WordCount{}
 	par, _ := strconv.Atoi(os.Args[2])
 
