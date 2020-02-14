@@ -15,8 +15,7 @@ import (
 )
 
 const (
-	nMap = 10
-	nRed = 10
+    nMap = 30
 )
 
 type EdgeToTables struct {
@@ -26,7 +25,6 @@ type EdgeToTables struct {
 func (e *EdgeToTables) Map(in <-chan interface{}, out chan<- interface{}) {
 	for elem := range in {
 		edge := elem.(Edge)
-		//fmt.Println(edge)
 		if edge.Fr < edge.To {
 			out <- JoinEdge{edge.To, "e1", edge}
 		}
@@ -39,7 +37,6 @@ func (e *EdgeToTables) Map(in <-chan interface{}, out chan<- interface{}) {
 func (e *EdgeToTables) Partition(in <-chan interface{}, outs []chan interface{}, wg *sync.WaitGroup) {
 	for elem := range in {
 		je := elem.(JoinEdge)
-		//fmt.Println(je, je.Key%len(outs))
 		outs[je.Key%len(outs)] <- je
 	}
 
@@ -57,8 +54,6 @@ func (e *EdgeToTables) Reduce(in <-chan interface{}, out chan<- interface{}, wg 
 	log.Println("Begin sorting")
 	sort.Sort(ByKeyThenTable(jes))
 	log.Println("End sorting")
-
-	//fmt.Println(jes)
 
 	numTriangles := 0
 	lastSeen := -1
@@ -93,7 +88,7 @@ func main() {
 	edges := make(map[Edge]bool)
 	e2t := &EdgeToTables{edges}
 
-	inMap, outRed := gomr.Run(10, 100, e2t, e2t, e2t)
+	inMap, outRed := gomr.Run(nMap, 200, e2t, e2t, e2t)
 
 	// Read edges file and populate map
 	file, err := os.Open(os.Args[1])
@@ -103,18 +98,20 @@ func main() {
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
+	for d:=0; scanner.Scan(); d=(d+1)%nMap {
 		ls := strings.Split(scanner.Text(), ",")
 		v1, _ := strconv.Atoi(ls[0])
 		v2, _ := strconv.Atoi(ls[1])
 
-		inMap <- Edge{v1, v2}
+		inMap[d] <- Edge{v1, v2}
 		if v1 > v2 {
 			edges[Edge{v1, v2}] = true
 		}
 	}
 
-	close(inMap)
+    for i:=0; i<nMap; i++ {
+        close(inMap[i])
+    }
 
 	numTriangles := 0
 
