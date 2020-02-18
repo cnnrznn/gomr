@@ -15,7 +15,7 @@ import (
 )
 
 const (
-    nMap = 30
+	nMap = 30
 )
 
 type EdgeToTables struct {
@@ -69,7 +69,7 @@ func (e *EdgeToTables) Reduce(in <-chan interface{}, out chan<- interface{}, wg 
 			arr = append(arr, je.Edge)
 		} else {
 			for _, e1 := range arr {
-				if e1.Fr < je.Edge.To && e1.Fr < je.Edge.Fr {
+				if e1.Fr < je.Edge.To {
 					if _, ok := e.edges[Edge{je.Edge.To, e1.Fr}]; ok {
 						numTriangles++
 					}
@@ -98,7 +98,7 @@ func main() {
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
-	for d:=0; scanner.Scan(); d=(d+1)%nMap {
+	for d := 0; scanner.Scan(); d = (d + 1) % nMap {
 		ls := strings.Split(scanner.Text(), ",")
 		v1, _ := strconv.Atoi(ls[0])
 		v2, _ := strconv.Atoi(ls[1])
@@ -109,9 +109,9 @@ func main() {
 		}
 	}
 
-    for i:=0; i<nMap; i++ {
-        close(inMap[i])
-    }
+	for i := 0; i < nMap; i++ {
+		close(inMap[i])
+	}
 
 	numTriangles := 0
 
