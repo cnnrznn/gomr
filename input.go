@@ -92,7 +92,7 @@ func TextFileParallel(fn string, inMap []chan interface{}) {
 				for start <= end {
 					advance, token, err := bufio.ScanLines(buffer[bufstart:bufend], atEOF)
 					if err != nil {
-						log.Fatal(err) // ScanLines doesn't throw an error ever in the source code
+						log.Fatal(err)
 					}
 
 					if advance == 0 {
