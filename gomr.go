@@ -2,6 +2,7 @@ package gomr
 
 import (
 	"bufio"
+	"io"
 	"log"
 	"math"
 	"os"
@@ -10,6 +11,7 @@ import (
 
 const (
 	CHANBUF = 4096
+	FILEBUF = 1024 * 1024 * 32
 )
 
 type Mapper interface {
@@ -68,33 +70,61 @@ func TextFileParallel(fn string, inMap []chan interface{}) {
 
 	size := stat.Size()
 	nChunks := len(inMap)
-	chunkSize := int(math.Ceil(float64(size) / float64(nChunks)))
+	chunkSize := int64(math.Ceil(float64(size) / float64(nChunks)))
 
 	for i := 0; i < nChunks; i++ {
 		go func(i int) {
-			start := chunkSize * i
-			var end int64 = int64(start + chunkSize)
-			var pos int64 = int64(start)
+			buffer := make([]byte, FILEBUF)
+			atEOF := false
+			skippedFirst := false
+
+			start := chunkSize * int64(i)
+			end := start + chunkSize
+			bufstart, bufend := 0, 0
 			log.Println(i, start, end)
 
 			file, _ := os.Open(fn)
 			defer file.Close()
-			_, err := file.Seek(int64(chunkSize*i), 0)
-			if err != nil {
-				log.Println(err)
+
+			pos, err := file.Seek(start, 0)
+			if err != nil || pos != start {
+				log.Fatal(pos, err)
 			}
 
-			scanner := bufio.NewScanner(file)
-			if i > 0 {
-				scanner.Scan()
-				pos, _ = file.Seek(0, 1)
-			}
+			for start <= end && !atEOF {
+				copy(buffer, buffer[bufstart:bufend])
+				bufend -= bufstart
 
-			for pos <= end && scanner.Scan() {
-				pos, _ = file.Seek(0, 1)
+				n, err := file.Read(buffer[bufend:])
+				if err != nil {
+					if err == io.EOF {
+						atEOF = true
+					} else {
+						log.Fatal(err)
+					}
+				}
 
-				inMap[i] <- scanner.Text()
-				log.Println(i, scanner.Text())
+				bufstart = 0
+				bufend += n
+
+				for start <= end {
+					advance, token, err := bufio.ScanLines(buffer[bufstart:bufend], atEOF)
+					if err != nil {
+						log.Fatal(err) // ScanLines doesn't throw an error ever in the source code
+					}
+
+					if advance == 0 {
+						break
+					}
+
+					bufstart += advance
+					start += int64(advance)
+
+					if i == 0 || skippedFirst {
+						inMap[i] <- string(token)
+					}
+					skippedFirst = true
+				}
 			}
 
 			close(inMap[i])
