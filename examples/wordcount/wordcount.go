@@ -72,13 +72,7 @@ func main() {
 	par, _ := strconv.Atoi(os.Args[2])
 
 	ins, out := gomr.Run(par, par, wc, wc, wc)
-	gomr.TextFile(os.Args[1], ins)
-
-	file, err := os.Open(os.Args[1])
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer file.Close()
+	gomr.TextFileParallel(os.Args[1], ins)
 
 	for count := range out {
 		//for _ = range out {

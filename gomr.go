@@ -3,7 +3,7 @@ package gomr
 import (
 	"bufio"
 	"log"
-	//"math"
+	"math"
 	"os"
 	"sync"
 )
@@ -24,50 +24,82 @@ type Reducer interface {
 	Reduce(in <-chan interface{}, out chan<- interface{}, wg *sync.WaitGroup)
 }
 
-func TextFile(fn string, inMap []chan interface{}) {
+func TextFileSerial(fn string, inMap chan interface{}) {
+	file, _ := os.Open(fn)
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+
+	for scanner.Scan() {
+		inMap <- scanner.Text()
+	}
+
+	close(inMap)
+}
+
+func TextFileMultiplex(fn string, inMap []chan interface{}) {
 	par := len(inMap)
 
 	file, _ := os.Open(fn)
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
-	for dest := 0; scanner.Scan(); dest = (dest + 1) % par {
-		inMap[dest] <- scanner.Text()
+
+	for d := 0; scanner.Scan(); d = (d + 1) % par {
+		inMap[d] <- scanner.Text()
 	}
 
 	for _, ch := range inMap {
 		close(ch)
 	}
+}
 
-	//stat, _ := file.Stat()
-	//size := stat.Size()
-	//nChunks := len(inMap)
-	//chunkSize := int(math.Ceil(float64(size) / float64(nChunks)))
+func TextFileParallel(fn string, inMap []chan interface{}) {
+	file, err := os.Open(fn)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
 
-	//for i := 0; i < nChunks; i++ {
-	//	go func(i int) {
-	//		file, _ := os.Open(fn)
-	//		defer file.Close()
-	//		_, err := file.Seek(int64(chunkSize*i), 0)
-	//		if err != nil {
-	//			log.Println(err)
-	//		}
+	stat, err := file.Stat()
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	//		scanner := bufio.NewScanner(file)
-	//		if i > 0 {
-	//			scanner.Scan()
-	//		}
+	size := stat.Size()
+	nChunks := len(inMap)
+	chunkSize := int(math.Ceil(float64(size) / float64(nChunks)))
 
-	//		nRead := 0
-	//		for scanner.Scan() && nRead < chunkSize {
-	//			inMap[i] <- scanner.Text()
-	//			nRead += len(scanner.Text())
-	//		}
+	for i := 0; i < nChunks; i++ {
+		go func(i int) {
+			start := chunkSize * i
+			var end int64 = int64(start + chunkSize)
+			var pos int64 = int64(start)
+			log.Println(i, start, end)
 
-	//		close(inMap[i])
-	//		log.Printf("File scan %v done.\n", i)
-	//	}(i)
-	//}
+			file, _ := os.Open(fn)
+			defer file.Close()
+			_, err := file.Seek(int64(chunkSize*i), 0)
+			if err != nil {
+				log.Println(err)
+			}
+
+			scanner := bufio.NewScanner(file)
+			if i > 0 {
+				scanner.Scan()
+				pos, _ = file.Seek(0, 1)
+			}
+
+			for pos <= end && scanner.Scan() {
+				pos, _ = file.Seek(0, 1)
+
+				inMap[i] <- scanner.Text()
+				log.Println(i, scanner.Text())
+			}
+
+			close(inMap[i])
+		}(i)
+	}
 }
 
 /*
@@ -81,7 +113,7 @@ func Run(nMap, nRed int, m Mapper, p Partitioner, r Reducer) (inMap []chan inter
 	inMap = make([]chan interface{}, nMap)
 	inPar := make([]chan interface{}, nMap)
 	inRed := make([]chan interface{}, nRed)
-	outRed = make(chan interface{})
+	outRed = make(chan interface{}, CHANBUF)
 
 	var wgMap, wgRed sync.WaitGroup
 	wgMap.Add(nMap)
