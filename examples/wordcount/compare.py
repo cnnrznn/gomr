@@ -11,20 +11,20 @@ for i in range(len(sets)):
     with open(sys.argv[i+1]) as inf:
         for line in inf:
             ls = line.split()
-            try:
-                k, v = ' '.join(ls[:-1]), ls[-1]
-                sets[i][k] = v
-            except:
-                print(line, i)
+            if len(ls) != 2:
+                continue
+
+            k, v = ls[0], ls[1]
+            if k not in sets[i]:
+                sets[i][k] = 0
+            sets[i][k] += int(v)
 
 match = True
 
 for k in set1:
     if set1[k] != set2[k]:
         match = False
-        print(k)
-        print(set1[k])
-        print(set2[k])
+        print("[{}]".format(k), set1[k], set2[k])
         print()
 
 if match:
