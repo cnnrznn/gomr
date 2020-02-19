@@ -1,6 +1,6 @@
 #!/bin/bash
 
-for par in 1 2 4 8
+for par in 1 2 4 8 16 32
 do
     for trial in $(seq 10)
     do
