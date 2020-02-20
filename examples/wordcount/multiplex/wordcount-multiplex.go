@@ -25,18 +25,26 @@ func (c Count) String() string {
 }
 
 func (w *WordCount) Map(in <-chan interface{}, out chan<- interface{}) {
+    counts := make(map[string]int)
+
 	for elem := range in {
 		for _, word := range strings.Split(elem.(string), " ") {
-			out <- word
+			//out <- word
+            counts[word]++
 		}
 	}
+
+    for k, v := range counts {
+        out <- Count{k, v}
+    }
 
 	close(out)
 }
 
 func (w *WordCount) Partition(in <-chan interface{}, outs []chan interface{}, wg *sync.WaitGroup) {
 	for elem := range in {
-		key := elem.(string)
+		//key := elem.(string)
+		key := elem.(Count).Key
 
 		h := sha1.New()
 		h.Write([]byte(key))
@@ -45,7 +53,8 @@ func (w *WordCount) Partition(in <-chan interface{}, outs []chan interface{}, wg
 			hash = hash * -1
 		}
 
-		outs[hash%len(outs)] <- key
+		//outs[hash%len(outs)] <- key
+		outs[hash%len(outs)] <- elem
 	}
 
 	wg.Done()
@@ -55,8 +64,10 @@ func (w *WordCount) Reduce(in <-chan interface{}, out chan<- interface{}, wg *sy
 	counts := make(map[string]int)
 
 	for elem := range in {
-		key := elem.(string)
-		counts[key]++
+		//key := elem.(string)
+        //counts[key]++
+		ct := elem.(Count)
+		counts[ct.Key] += ct.Value
 	}
 
 	for k, v := range counts {
