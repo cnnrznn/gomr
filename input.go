@@ -8,6 +8,8 @@ import (
 	"os"
 )
 
+// TextFileSerial Open a file and read lines from the file
+// into a single input channel
 func TextFileSerial(fn string, inMap chan interface{}) {
 	file, _ := os.Open(fn)
 	defer file.Close()
@@ -21,6 +23,8 @@ func TextFileSerial(fn string, inMap chan interface{}) {
 	close(inMap)
 }
 
+// TextFileMultiplex Read lines from file and multiplex between
+// multiple intput channels
 func TextFileMultiplex(fn string, inMap []chan interface{}) {
 	par := len(inMap)
 
@@ -38,6 +42,9 @@ func TextFileMultiplex(fn string, inMap []chan interface{}) {
 	}
 }
 
+// TextFileParallel Read from file in parallel. Split file into
+// chunks based on the number of inMap channels and read input
+// by lines.
 func TextFileParallel(fn string, inMap []chan interface{}) {
 	file, err := os.Open(fn)
 	if err != nil {
