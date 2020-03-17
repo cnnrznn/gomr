@@ -22,28 +22,28 @@ def mymap(x):
 
     return result
 
+def weirdTrans(x):
+    key = x[0][0]
+    tn = x[0][1]
+    e = x[1]
+    return (key, (tn, e))
+
 def checkTriangles(lookup, vs):
     count = 0
     t1 = []
-    joinKey = -1
 
     for v in vs:
-        key = v[0][0]
-        tn = v[0][1]
+        tn = v[0]
         v3 = v[1][1]
-        if key != joinKey:
-            t1 = []
-            joinKey = key
         if tn == 'e1':
             t1.append(v[1][0])
         else:
-            #t2.append(v[1][1])
             for v1 in t1:
                 if v1 < v3:
                     if lookup.value.get((v3, v1), False):
                         count += 1
 
-    return [count]
+    return count
 
 if __name__ == '__main__':
     fn = sys.argv[1] # filename of input
@@ -55,8 +55,13 @@ if __name__ == '__main__':
     text_file = sc.textFile(fn)
     lookup = sc.broadcast(text_file.flatMap(toLU).collectAsMap())
     count = text_file.flatMap(mymap) \
-                    .repartitionAndSortWithinPartitions(p, lambda k: k[0]) \
-                    .mapPartitions(lambda vs: checkTriangles(lookup, vs)) \
+                    .map(weirdTrans) \
+                    .groupByKey(p) \
+                    .mapValues(lambda vs: sorted(vs, key=lambda x: x[0])) \
+                    .map(lambda x: checkTriangles(lookup, x[1])) \
                     .reduce(lambda a,b: a + b)
+                    #.repartitionAndSortWithinPartitions(p, lambda k: k[0]) \
+                    #.mapPartitions(lambda vs: checkTriangles(lookup, vs)) \
+                    #.reduce(lambda a,b: a + b)
 
     print(count)
