@@ -22,35 +22,26 @@ def mymap(x):
 
     return result
 
-def count4Key(lookup, t1, t2):
-    result = 0
-
-    for v3 in t2:
-        for v1 in t1:
-            if v1 < v3:
-                if lookup.value.get((v3, v1), False):
-                    result += 1
-    
-    return result
-    
 def checkTriangles(lookup, vs):
     count = 0
     t1 = []
-    t2 = []
     joinKey = -1
 
     for v in vs:
         key = v[0][0]
         tn = v[0][1]
+        v3 = v[1][1]
         if key != joinKey:
-            count += count4Key(lookup, t1, t2)
             t1 = []
-            t2 = []
             joinKey = key
         if tn == 'e1':
             t1.append(v[1][0])
         else:
-            t2.append(v[1][1])
+            #t2.append(v[1][1])
+            for v1 in t1:
+                if v1 < v3:
+                    if lookup.value.get((v3, v1), False):
+                        count += 1
 
     return [count]
 
@@ -64,7 +55,7 @@ if __name__ == '__main__':
     text_file = sc.textFile(fn)
     lookup = sc.broadcast(text_file.flatMap(toLU).collectAsMap())
     count = text_file.flatMap(mymap) \
-                    .repartitionAndSortWithinPartitions(p, lambda k: k[0], keyfunc=lambda k: k[0]) \
+                    .repartitionAndSortWithinPartitions(p, lambda k: k[0]) \
                     .mapPartitions(lambda vs: checkTriangles(lookup, vs)) \
                     .reduce(lambda a,b: a + b)
 
