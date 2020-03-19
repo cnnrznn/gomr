@@ -27,11 +27,6 @@ func (e *EdgeToTables) Map(in <-chan interface{}, out chan<- interface{}) {
 		v2, _ := strconv.Atoi(ls[1]) // Read edges file and populate map
 		edge := Edge{v1, v2}
 
-		m := 20000
-		if v1 >= m || v2 >= m {
-			continue
-		}
-
 		if v1 > v2 {
 			localMap[edge] = true
 		}
