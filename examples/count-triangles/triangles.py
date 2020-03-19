@@ -10,6 +10,13 @@ def toLU(x):
         return [((v1, v2), True)]
     return []
 
+def maxFilter(x):
+    m = 20000
+    ls = x.split(',')
+    v1 = int(ls[0])
+    v2 = int(ls[1])
+    return v1 < m and v2 < m
+
 def mymap(x):
     result = []
     ls = x.split(',')
@@ -31,6 +38,7 @@ def weirdTrans(x):
 def checkTriangles(lookup, vs):
     count = 0
     t1 = []
+    lu = lookup.value
 
     for v in vs:
         tn = v[0]
@@ -40,7 +48,7 @@ def checkTriangles(lookup, vs):
         else:
             for v1 in t1:
                 if v1 < v3:
-                    if lookup.value.get((v3, v1), False):
+                    if lu.get((v3, v1), False):
                         count += 1
 
     return count
@@ -53,8 +61,10 @@ if __name__ == '__main__':
                     appName="Triangle Count")
 
     text_file = sc.textFile(fn)
-    lookup = sc.broadcast(text_file.flatMap(toLU).collectAsMap())
-    count = text_file.flatMap(mymap) \
+    lookup = sc.broadcast(text_file.filter(maxFilter) \
+                    .flatMap(toLU).collectAsMap())
+    count = text_file.filter(maxFilter) \
+                    .flatMap(mymap) \
                     .map(weirdTrans) \
                     .groupByKey(p) \
                     .mapValues(lambda vs: sorted(vs, key=lambda x: x[0])) \
