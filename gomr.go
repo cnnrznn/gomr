@@ -26,7 +26,7 @@ type Reducer interface {
  * Architect and MapReduce Job with the following number of mappers and
  * reducers. Return to the user a channel for intputing their data
  */
-func Run(nMap, nRed int, m Mapper, p Partitioner, r Reducer) (inMap []chan interface{},
+func RunLocal(nMap, nRed int, m Mapper, p Partitioner, r Reducer) (inMap []chan interface{},
 	outRed chan interface{}) {
 	log.Println("Architecting...")
 

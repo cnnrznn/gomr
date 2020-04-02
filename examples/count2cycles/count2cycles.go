@@ -87,7 +87,7 @@ func main() {
 	edges := make(map[Edge]bool)
 	e2t := &EdgeToTables{edges}
 
-	inMap, outRed := gomr.Run(10, 100, e2t, e2t, e2t)
+	inMap, outRed := gomr.RunLocal(10, 100, e2t, e2t, e2t)
 
 	// Read edges file and populate map
 	file, err := os.Open(os.Args[1])
@@ -97,15 +97,17 @@ func main() {
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
+	for i := 0; scanner.Scan(); i++ {
 		ls := strings.Split(scanner.Text(), ",")
 		v1, _ := strconv.Atoi(ls[0])
 		v2, _ := strconv.Atoi(ls[1])
 
-		inMap <- Edge{v1, v2}
+		inMap[i%len(inMap)] <- Edge{v1, v2}
 	}
 
-	close(inMap)
+	for i := 0; i < len(inMap); i++ {
+		close(inMap[i])
+	}
 
 	numTwoCycles := 0
 

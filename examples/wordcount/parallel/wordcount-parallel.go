@@ -25,18 +25,18 @@ func (c Count) String() string {
 }
 
 func (w *WordCount) Map(in <-chan interface{}, out chan<- interface{}) {
-    counts := make(map[string]int)
+	counts := make(map[string]int)
 
 	for elem := range in {
 		for _, word := range strings.Split(elem.(string), " ") {
 			//out <- word
-            counts[word]++
+			counts[word]++
 		}
 	}
 
-    for k, v := range counts {
-        out <- Count{k, v}
-    }
+	for k, v := range counts {
+		out <- Count{k, v}
+	}
 
 	close(out)
 }
@@ -65,7 +65,7 @@ func (w *WordCount) Reduce(in <-chan interface{}, out chan<- interface{}, wg *sy
 
 	for elem := range in {
 		//key := elem.(string)
-        //counts[key]++
+		//counts[key]++
 		ct := elem.(Count)
 		counts[ct.Key] += ct.Value
 	}
@@ -82,7 +82,7 @@ func main() {
 	wc := &WordCount{}
 	par, _ := strconv.Atoi(os.Args[2])
 
-	ins, out := gomr.Run(par, par, wc, wc, wc)
+	ins, out := gomr.RunLocal(par, par, wc, wc, wc)
 	gomr.TextFileParallel(os.Args[1], ins)
 
 	for count := range out {

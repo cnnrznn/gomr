@@ -66,8 +66,8 @@ func main() {
 
 	e2t := &EdgeToCount{}
 
-	inMap, outRed := gomr.Run(10, 100, e2t, e2t, e2t)
-	gomr.TextFile(os.Args[1], inMap)
+	inMap, outRed := gomr.RunLocal(10, 100, e2t, e2t, e2t)
+	gomr.TextFileParallel(os.Args[1], inMap)
 
 	// Read edges file and populate map
 	numTwoPath := 0

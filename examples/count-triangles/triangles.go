@@ -101,7 +101,7 @@ func main() {
 	nRed, _ := strconv.Atoi(os.Args[3])
 	edges := make(map[Edge]bool)
 	e2t := &EdgeToTables{edges, &sync.Mutex{}}
-	inMap, outRed := gomr.Run(nMap, nRed, e2t, e2t, e2t)
+	inMap, outRed := gomr.RunLocal(nMap, nRed, e2t, e2t, e2t)
 
 	gomr.TextFileParallel(os.Args[1], inMap)
 
