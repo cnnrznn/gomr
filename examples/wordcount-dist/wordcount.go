@@ -12,8 +12,8 @@ import (
 type WordCount struct{}
 
 type Count struct {
-	Key   string
-	Value int
+	Key   string `json:"key"`
+	Value int    `json:"value"`
 }
 
 func (c Count) String() string {
