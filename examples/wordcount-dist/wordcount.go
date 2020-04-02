@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/sha1"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"github.com/cnnrznn/gomr"
 	"strings"
@@ -57,7 +58,9 @@ func (w *WordCount) Reduce(in <-chan interface{}, out chan<- interface{}, wg *sy
 	counts := make(map[string]int)
 
 	for elem := range in {
-		ct := elem.(Count)
+		bs := elem.([]byte)
+		ct := Count{}
+		json.Unmarshal(bs, &ct)
 		counts[ct.Key] += ct.Value
 	}
 

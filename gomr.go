@@ -136,22 +136,40 @@ func (w *Worker) RunRed() {
 		len(w.config["workers"].([]interface{})),
 	)
 	fromNet := server.Serve()
-	//inRed := make(map[interface{}]chan interface{})
-	//var wg sync.WaitGroup
+	inRed := make(map[interface{}]chan interface{})
+	outRed := make(chan interface{}, CHANBUF)
+	var wg, wgRed sync.WaitGroup
+	wg.Add(1)
+	defer wg.Wait()
+
+	go func() {
+		defer wg.Done()
+		for out := range outRed {
+			fmt.Println(out)
+		}
+	}()
 
 	for bs := range fromNet {
-		fmt.Println(bs)
-		//m := make(map[string]interface{})
-		//err := json.Unmarshal(bs, &m)
-		//if err != nil {
-		//	log.Println("Error unmarshal:", err)
-		//}
+		m := make(map[string]interface{})
+		err := json.Unmarshal(bs, &m)
+		if err != nil {
+			log.Println("Error unmarshal:", err)
+		}
 
-		//if _, ok := inRed[m["key"]]; !ok {
-		//	// create new goroutine
-		//}
-		//inRed[m["key"]] <- bs
+		if _, ok := inRed[m["key"]]; !ok {
+			ch := make(chan interface{}, CHANBUF)
+			inRed[m["key"]] = ch
+			wgRed.Add(1)
+			go w.reducer.Reduce(ch, outRed, &wgRed)
+		}
+		inRed[m["key"]] <- bs
 	}
+
+	for _, v := range inRed {
+		close(v)
+	}
+	wgRed.Wait()
+	close(outRed)
 }
 
 func Run(m Mapper, p Partitioner, r Reducer) {

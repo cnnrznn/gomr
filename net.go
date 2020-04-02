@@ -36,13 +36,15 @@ func NewPipe(dst string) *Pipe {
 
 func handlePipe(conn net.Conn, ch chan []byte, wg *sync.WaitGroup) {
 	defer wg.Done()
-	buf := make([]byte, 4096)
-	for {
-		n, err := conn.Read(buf)
+	dec := json.NewDecoder(conn)
+	for dec.More() {
+		m := make(map[string]interface{})
+		dec.Decode(&m)
+		bs, err := json.Marshal(m)
 		if err != nil {
-			return
+			log.Println("Error marshal:", err)
 		}
-		ch <- buf[:n]
+		ch <- bs
 	}
 }
 
@@ -69,6 +71,7 @@ func (s *Server) Serve() chan []byte {
 				conn, err := ln.Accept()
 				if err != nil {
 					log.Println("Error accept:", err)
+					break
 				}
 				// Write values to ch
 				go handlePipe(conn, ch, &wg)
