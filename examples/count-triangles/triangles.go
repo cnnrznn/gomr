@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"log"
 	"os"
@@ -14,22 +13,35 @@ import (
 	. "github.com/cnnrznn/gomr/examples/edge"
 )
 
-const (
-	nMap = 30
-)
-
 type EdgeToTables struct {
 	edges map[Edge]bool
+	mux   *sync.Mutex
 }
 
 func (e *EdgeToTables) Map(in <-chan interface{}, out chan<- interface{}) {
+	localMap := make(map[Edge]bool)
+
 	for elem := range in {
-		edge := elem.(Edge)
+		ls := strings.Split(elem.(string), ",")
+		v1, _ := strconv.Atoi(ls[0])
+		v2, _ := strconv.Atoi(ls[1]) // Read edges file and populate map
+		edge := Edge{v1, v2}
+
+		if v1 > v2 {
+			localMap[edge] = true
+		}
+
 		if edge.Fr < edge.To {
 			out <- JoinEdge{edge.To, "e1", edge}
 		}
 		out <- JoinEdge{edge.Fr, "e2", edge}
 	}
+
+	e.mux.Lock()
+	for k, v := range localMap {
+		e.edges[k] = v
+	}
+	e.mux.Unlock()
 
 	close(out)
 }
@@ -85,33 +97,13 @@ func (e *EdgeToTables) Reduce(in <-chan interface{}, out chan<- interface{}, wg 
 func main() {
 	log.Println("Spinning up...")
 
+	nMap, _ := strconv.Atoi(os.Args[2])
+	nRed, _ := strconv.Atoi(os.Args[3])
 	edges := make(map[Edge]bool)
-	e2t := &EdgeToTables{edges}
+	e2t := &EdgeToTables{edges, &sync.Mutex{}}
+	inMap, outRed := gomr.Run(nMap, nRed, e2t, e2t, e2t)
 
-	inMap, outRed := gomr.Run(nMap, 200, e2t, e2t, e2t)
-
-	// Read edges file and populate map
-	file, err := os.Open(os.Args[1])
-	if err != nil {
-		log.Fatal("Couldn't find input file", err)
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	for d := 0; scanner.Scan(); d = (d + 1) % nMap {
-		ls := strings.Split(scanner.Text(), ",")
-		v1, _ := strconv.Atoi(ls[0])
-		v2, _ := strconv.Atoi(ls[1])
-
-		inMap[d] <- Edge{v1, v2}
-		if v1 > v2 {
-			edges[Edge{v1, v2}] = true
-		}
-	}
-
-	for i := 0; i < nMap; i++ {
-		close(inMap[i])
-	}
+	gomr.TextFileParallel(os.Args[1], inMap)
 
 	numTriangles := 0
 
