@@ -5,13 +5,14 @@ import (
 )
 
 type Edge struct {
-	Fr, To int
+	Fr int `json:"fr"`
+	To int `json:"to"`
 }
 
 type JoinEdge struct {
-	Key   int
-	Table string
-	Edge  Edge
+	Key   int    `json:"key"`
+	Table string `json:"table"`
+	Edge  Edge   `json:"edge"`
 }
 
 type ByKeyThenTable []JoinEdge
