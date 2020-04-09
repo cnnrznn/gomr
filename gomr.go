@@ -30,6 +30,83 @@ type Reducer interface {
 	Reduce(in <-chan interface{}, out chan<- interface{}, wg *sync.WaitGroup)
 }
 
+type Keyer interface {
+	Key() interface{}
+}
+
+type LocalShuffle struct {
+	reducers map[interface{}]chan interface{}
+	mux      sync.Mutex
+	reducer  Reducer
+}
+
+func (ls *LocalShuffle) Shuffle(i int, inRed, outRed chan interface{}) {
+	var wg sync.WaitGroup
+
+	for item := range inRed {
+		key := item.(Keyer).Key()
+		if _, ok := ls.reducers[key]; !ok {
+			ls.mux.Lock()
+			ls.reducers[key] = make(chan interface{}, CHANBUF)
+			wg.Add(1)
+			go ls.reducer.Reduce(inRed, outRed, &wg)
+		}
+		ls.reducers[key] <- item
+	}
+
+	for _, v := range ls.reducers {
+		close(v)
+	}
+	wg.Wait()
+	close(outRed)
+}
+
+/*
+ * Architect and MapReduce Job with the following number of mappers and
+ * reducers. Return to the user a channel for intputing their data
+ */
+func RunLocalDynamic(m Mapper, p Partitioner, r Reducer) (inMap []chan interface{},
+	outRed chan interface{}) {
+	log.Println("Architecting...")
+
+	nCpu := runtime.NumCPU()
+
+	inMap = make([]chan interface{}, nCpu)   // number of mappers == cpus
+	inPar := make([]chan interface{}, nCpu)  // number of partitioners == nMap
+	inRed := make([]chan interface{}, nCpu)  // number of reducer input == cpus
+	outRed = make(chan interface{}, CHANBUF) // single output channel
+
+	localShuffle := LocalShuffle{ // reducer-generator
+		reducers: make(map[interface{}]chan interface{}),
+		reducer:  r,
+	}
+
+	var wgPar sync.WaitGroup
+	wgPar.Add(nCpu)
+
+	for i := 0; i < nCpu; i++ {
+		inRed[i] = make(chan interface{}, CHANBUF)
+		go localShuffle.Shuffle(i, inRed[i], outRed)
+	}
+
+	for i := 0; i < nCpu; i++ {
+		inMap[i] = make(chan interface{}, CHANBUF)
+		inPar[i] = make(chan interface{}, CHANBUF)
+		go p.Partition(inPar[i], inRed, &wgPar)
+		go m.Map(inMap[i], inPar[i])
+	}
+
+	go func() {
+		wgPar.Wait()
+		for i := 0; i < nCpu; i++ {
+			close(inRed[i])
+		}
+		log.Println("Map and Partition done.")
+	}()
+
+	return
+}
+
 /*
  * Architect and MapReduce Job with the following number of mappers and
  * reducers. Return to the user a channel for intputing their data
