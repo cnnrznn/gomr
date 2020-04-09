@@ -15,7 +15,7 @@ type JoinEdge struct {
 	Edge    Edge   `json:"edge"`
 }
 
-func (je *JoinEdge) Key() interface{} {
+func (je JoinEdge) Key() interface{} {
 	return je.JoinKey
 }
 
