@@ -37,28 +37,24 @@ type Keyer interface {
 type LocalShuffle struct {
 	reducers map[interface{}]chan interface{}
 	mux      sync.Mutex
+	wg       sync.WaitGroup
 	reducer  Reducer
 }
 
-func (ls *LocalShuffle) Shuffle(i int, inRed, outRed chan interface{}) {
-	var wg sync.WaitGroup
-
+func (ls *LocalShuffle) Shuffle(inRed, outRed chan interface{}, wg *sync.WaitGroup) {
+	defer wg.Done()
 	for item := range inRed {
 		key := item.(Keyer).Key()
+		ls.mux.Lock()
 		if _, ok := ls.reducers[key]; !ok {
-			ls.mux.Lock()
+			ls.wg.Add(1)
 			ls.reducers[key] = make(chan interface{}, CHANBUF)
-			wg.Add(1)
-			go ls.reducer.Reduce(inRed, outRed, &wg)
+			go ls.reducer.Reduce(ls.reducers[key], outRed, &ls.wg)
+
 		}
+		ls.mux.Unlock()
 		ls.reducers[key] <- item
 	}
-
-	for _, v := range ls.reducers {
-		close(v)
-	}
-	wg.Wait()
-	close(outRed)
 }
 
 /*
@@ -81,12 +77,13 @@ func RunLocalDynamic(m Mapper, p Partitioner, r Reducer) (inMap []chan interface
 		reducer:  r,
 	}
 
-	var wgPar sync.WaitGroup
+	var wgPar, wgShuf sync.WaitGroup
 	wgPar.Add(nCpu)
+	wgShuf.Add(nCpu)
 
 	for i := 0; i < nCpu; i++ {
 		inRed[i] = make(chan interface{}, CHANBUF)
-		go localShuffle.Shuffle(i, inRed[i], outRed)
+		go localShuffle.Shuffle(inRed[i], outRed, &wgShuf)
 	}
 
 	for i := 0; i < nCpu; i++ {
@@ -98,10 +95,23 @@ func RunLocalDynamic(m Mapper, p Partitioner, r Reducer) (inMap []chan interface
 
 	go func() {
 		wgPar.Wait()
+		log.Println("Map and Partition done.")
+
 		for i := 0; i < nCpu; i++ {
 			close(inRed[i])
 		}
-		log.Println("Map and Partition done.")
+
+		wgShuf.Wait()
+		log.Println("Shuffle done.")
+
+		for _, v := range localShuffle.reducers {
+			close(v)
+		}
+
+		localShuffle.wg.Wait()
+		log.Println("Reduce done.")
+
+		close(outRed)
 	}()
 
 	return
