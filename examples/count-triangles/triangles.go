@@ -47,15 +47,16 @@ func (e *EdgeToTables) Map(in <-chan interface{}, out chan<- interface{}) {
 }
 
 func (e *EdgeToTables) Partition(in <-chan interface{}, outs []chan interface{}, wg *sync.WaitGroup) {
+	defer wg.Done()
 	for elem := range in {
 		je := elem.(JoinEdge)
-		outs[je.Key%len(outs)] <- je
+		outs[je.JoinKey%len(outs)] <- je
 	}
-
-	wg.Done()
 }
 
 func (e *EdgeToTables) Reduce(in <-chan interface{}, out chan<- interface{}, wg *sync.WaitGroup) {
+	defer wg.Done()
+
 	jes := []JoinEdge{}
 
 	for elem := range in {
@@ -72,9 +73,9 @@ func (e *EdgeToTables) Reduce(in <-chan interface{}, out chan<- interface{}, wg 
 	arr := []Edge{}
 
 	for _, je := range jes {
-		if je.Key != lastSeen {
+		if je.JoinKey != lastSeen {
 			arr = nil
-			lastSeen = je.Key
+			lastSeen = je.JoinKey
 		}
 
 		if je.Table == "e1" {
@@ -91,7 +92,6 @@ func (e *EdgeToTables) Reduce(in <-chan interface{}, out chan<- interface{}, wg 
 	}
 
 	out <- numTriangles
-	wg.Done()
 }
 
 func main() {
@@ -101,7 +101,8 @@ func main() {
 	nRed, _ := strconv.Atoi(os.Args[3])
 	edges := make(map[Edge]bool)
 	e2t := &EdgeToTables{edges, &sync.Mutex{}}
-	inMap, outRed := gomr.RunLocal(nMap, nRed, e2t, e2t, e2t)
+	//inMap, outRed := gomr.RunLocal(nMap, nRed, e2t, e2t, e2t)
+	inMap, outRed := gomr.RunLocalDynamic(e2t, e2t, e2t)
 
 	gomr.TextFileParallel(os.Args[1], inMap)
 

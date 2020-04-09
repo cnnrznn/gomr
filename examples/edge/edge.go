@@ -10,9 +10,13 @@ type Edge struct {
 }
 
 type JoinEdge struct {
-	Key   int    `json:"key"`
-	Table string `json:"table"`
-	Edge  Edge   `json:"edge"`
+	JoinKey int    `json:"key"`
+	Table   string `json:"table"`
+	Edge    Edge   `json:"edge"`
+}
+
+func (je *JoinEdge) Key() interface{} {
+	return je.JoinKey
 }
 
 type ByKeyThenTable []JoinEdge
@@ -26,10 +30,10 @@ func (s ByKeyThenTable) Swap(i, j int) {
 }
 
 func (s ByKeyThenTable) Less(i, j int) bool {
-	if s[i].Key < s[j].Key {
+	if s[i].JoinKey < s[j].JoinKey {
 		return true
 	}
-	if s[i].Key > s[j].Key {
+	if s[i].JoinKey > s[j].JoinKey {
 		return false
 	}
 	if strings.Compare(s[i].Table, s[j].Table) < 0 {
