@@ -97,12 +97,11 @@ func (e *EdgeToTables) Reduce(in <-chan interface{}, out chan<- interface{}, wg 
 func main() {
 	log.Println("Spinning up...")
 
-	//nMap, _ := strconv.Atoi(os.Args[2])
-	//nRed, _ := strconv.Atoi(os.Args[3])
+	nMap, _ := strconv.Atoi(os.Args[2])
+	nRed, _ := strconv.Atoi(os.Args[3])
 	edges := make(map[Edge]bool)
 	e2t := &EdgeToTables{edges, &sync.Mutex{}}
-	//inMap, outRed := gomr.RunLocal(nMap, nRed, e2t, e2t, e2t)
-	inMap, outRed := gomr.RunLocalDynamic(e2t, e2t, e2t)
+	inMap, outRed := gomr.RunLocal(nMap, nRed, e2t, e2t, e2t)
 
 	gomr.TextFileParallel(os.Args[1], inMap)
 
