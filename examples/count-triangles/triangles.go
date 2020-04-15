@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"sort"
@@ -95,6 +96,7 @@ func (e *EdgeToTables) Reduce(in <-chan interface{}, out chan<- interface{}, wg 
 }
 
 func main() {
+	log.SetOutput(ioutil.Discard)
 	log.Println("Spinning up...")
 
 	nMap, _ := strconv.Atoi(os.Args[2])
