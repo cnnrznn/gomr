@@ -60,18 +60,13 @@ if __name__ == '__main__':
     sc = SparkContext(master="local[{}]".format(p),
                     appName="Triangle Count")
 
-    text_file = sc.textFile(fn)
-    lookup = sc.broadcast(text_file.filter(maxFilter) \
-                    .flatMap(toLU).collectAsMap())
-    count = text_file.filter(maxFilter) \
-                    .flatMap(mymap) \
+    text_file = sc.textFile(fn)#.filter(maxFilter)
+    lookup = sc.broadcast(text_file.flatMap(toLU).collectAsMap())
+    count = text_file.flatMap(mymap) \
                     .map(weirdTrans) \
                     .groupByKey(p) \
                     .mapValues(lambda vs: sorted(vs, key=lambda x: x[0])) \
                     .map(lambda x: checkTriangles(lookup, x[1])) \
                     .reduce(lambda a,b: a + b)
-                    #.repartitionAndSortWithinPartitions(p, lambda k: k[0]) \
-                    #.mapPartitions(lambda vs: checkTriangles(lookup, vs)) \
-                    #.reduce(lambda a,b: a + b)
 
     print(count)
