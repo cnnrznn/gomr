@@ -11,7 +11,7 @@ def toLU(x):
     return []
 
 def maxFilter(x):
-    m = 20000
+    m = 40000
     ls = x.split(',')
     v1 = int(ls[0])
     v2 = int(ls[1])
@@ -24,16 +24,10 @@ def mymap(x):
     v2 = int(ls[1])
 
     if v1 < v2:
-        result.append(((v2, 'e1'), (v1, v2)))
-    result.append(((v1, 'e2'), (v1, v2)))
+        result.append((v2, ('e1', (v1, v2))))
+    result.append((v1, ('e2', (v1, v2))))
 
     return result
-
-def weirdTrans(x):
-    key = x[0][0]
-    tn = x[0][1]
-    e = x[1]
-    return (key, (tn, e))
 
 def checkTriangles(lookup, vs):
     count = 0
@@ -60,10 +54,9 @@ if __name__ == '__main__':
     sc = SparkContext(master="local[{}]".format(p),
                     appName="Triangle Count")
 
-    text_file = sc.textFile(fn)#.filter(maxFilter)
+    text_file = sc.textFile(fn).filter(maxFilter)
     lookup = sc.broadcast(text_file.flatMap(toLU).collectAsMap())
     count = text_file.flatMap(mymap) \
-                    .map(weirdTrans) \
                     .groupByKey(p) \
                     .mapValues(lambda vs: sorted(vs, key=lambda x: x[0])) \
                     .map(lambda x: checkTriangles(lookup, x[1])) \
