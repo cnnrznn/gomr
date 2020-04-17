@@ -1,9 +1,2 @@
 *.txt
 *.csv
-
-count-triangles
-count-triangles-dist
-count2path
-wordcount-parallel
-wordcount-dist
-config.json
