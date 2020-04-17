@@ -11,7 +11,7 @@ def toLU(x):
     return []
 
 def maxFilter(x):
-    m = 40000
+    m = 100000
     ls = x.split(',')
     v1 = int(ls[0])
     v2 = int(ls[1])
