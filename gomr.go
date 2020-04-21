@@ -42,6 +42,7 @@ type localShuffle struct {
 
 func (ls *localShuffle) shuffle(inRed, outRed chan interface{}, wg *sync.WaitGroup) {
 	defer wg.Done()
+
 	reducers := make(map[interface{}]chan interface{})
 
 	for item := range inRed {
@@ -119,7 +120,6 @@ func RunLocalDynamic(m Mapper, p Partitioner, r Reducer) (inMap []chan interface
  */
 func RunLocal(nMap, nRed int, m Mapper, p Partitioner, r Reducer) (inMap []chan interface{},
 	outRed chan interface{}) {
-	log.Println("Architecting...")
 
 	inMap = make([]chan interface{}, nMap)
 	inPar := make([]chan interface{}, nMap)
