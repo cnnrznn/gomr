@@ -38,7 +38,7 @@ func (e *EdgeToTables) Map(in <-chan interface{}, out chan<- interface{}) {
 func (e *EdgeToTables) Partition(in <-chan interface{}, outs []chan interface{}, wg *sync.WaitGroup) {
 	for elem := range in {
 		je := elem.(JoinEdge)
-		outs[je.Key%len(outs)] <- je
+		outs[je.JoinKey%len(outs)] <- je
 	}
 
 	wg.Done()
@@ -61,9 +61,9 @@ func (e *EdgeToTables) Reduce(in <-chan interface{}, out chan<- interface{}, wg 
 	arr := []Edge{}
 
 	for _, je := range jes {
-		if je.Key != lastSeen {
+		if je.JoinKey != lastSeen {
 			arr = nil
-			lastSeen = je.Key
+			lastSeen = je.JoinKey
 		}
 
 		if je.Table == "e1" {

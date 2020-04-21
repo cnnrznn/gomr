@@ -259,7 +259,7 @@ func (w *Worker) RunRed() {
 	close(outRed)
 }
 
-func Run(m Mapper, p Partitioner, r Reducer) {
+func RunDistributed(m Mapper, p Partitioner, r Reducer) {
 	w := Worker{}
 	ncpu := runtime.NumCPU()
 	id := flag.Int("id", 0, "What is the reducer id of the worker?")

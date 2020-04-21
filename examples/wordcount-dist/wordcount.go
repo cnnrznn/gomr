@@ -73,5 +73,5 @@ func (w *WordCount) Reduce(in <-chan interface{}, out chan<- interface{}, wg *sy
 
 func main() {
 	wc := &WordCount{}
-	gomr.Run(wc, wc, wc)
+	gomr.RunDistributed(wc, wc, wc)
 }
