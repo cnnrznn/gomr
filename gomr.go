@@ -34,37 +34,38 @@ type Keyer interface {
 	Key() interface{}
 }
 
-type LocalShuffle struct {
-	reducers map[interface{}]chan interface{}
-	mux      sync.Mutex
-	wg       sync.WaitGroup
-	reducer  Reducer
+type localShuffle struct {
+	mux     sync.Mutex
+	wg      sync.WaitGroup
+	reducer Reducer
 }
 
-func (ls *LocalShuffle) Shuffle(inRed, outRed chan interface{}, wg *sync.WaitGroup) {
+func (ls *localShuffle) shuffle(inRed, outRed chan interface{}, wg *sync.WaitGroup) {
 	defer wg.Done()
+	reducers := make(map[interface{}]chan interface{})
+
 	for item := range inRed {
 		key := item.(Keyer).Key()
-		ls.mux.Lock()
-		if _, ok := ls.reducers[key]; !ok {
+		if _, ok := reducers[key]; !ok {
 			ls.wg.Add(1)
-			ls.reducers[key] = make(chan interface{}, CHANBUF)
-			go ls.reducer.Reduce(ls.reducers[key], outRed, &ls.wg)
-
+			reducers[key] = make(chan interface{}, CHANBUF)
+			go ls.reducer.Reduce(reducers[key], outRed, &ls.wg)
 		}
-		ls.mux.Unlock()
-		ls.reducers[key] <- item
+		reducers[key] <- item
 	}
+
+	for _, v := range reducers {
+		close(v)
+	}
+
 }
 
 /*
- * Architect and MapReduce Job with the following number of mappers and
- * reducers. Return to the user a channel for intputing their data
+ * Architect and MapReduce Job a dynamic number of mappers and reducers. Return
+ * to the user a channel for intputing their data
  */
 func RunLocalDynamic(m Mapper, p Partitioner, r Reducer) (inMap []chan interface{},
 	outRed chan interface{}) {
-	log.Println("Architecting...")
-
 	nCpu := runtime.NumCPU()
 
 	inMap = make([]chan interface{}, nCpu)   // number of mappers == cpus
@@ -72,9 +73,8 @@ func RunLocalDynamic(m Mapper, p Partitioner, r Reducer) (inMap []chan interface
 	inRed := make([]chan interface{}, nCpu)  // number of reducer input == cpus
 	outRed = make(chan interface{}, CHANBUF) // single output channel
 
-	localShuffle := LocalShuffle{ // reducer-generator
-		reducers: make(map[interface{}]chan interface{}),
-		reducer:  r,
+	ls := localShuffle{ // reducer-generator
+		reducer: r,
 	}
 
 	var wgPar, wgShuf sync.WaitGroup
@@ -83,7 +83,7 @@ func RunLocalDynamic(m Mapper, p Partitioner, r Reducer) (inMap []chan interface
 
 	for i := 0; i < nCpu; i++ {
 		inRed[i] = make(chan interface{}, CHANBUF)
-		go localShuffle.Shuffle(inRed[i], outRed, &wgShuf)
+		go ls.shuffle(inRed[i], outRed, &wgShuf)
 	}
 
 	for i := 0; i < nCpu; i++ {
@@ -104,11 +104,7 @@ func RunLocalDynamic(m Mapper, p Partitioner, r Reducer) (inMap []chan interface
 		wgShuf.Wait()
 		log.Println("Shuffle done.")
 
-		for _, v := range localShuffle.reducers {
-			close(v)
-		}
-
-		localShuffle.wg.Wait()
+		ls.wg.Wait()
 		log.Println("Reduce done.")
 
 		close(outRed)
@@ -161,7 +157,7 @@ func RunLocal(nMap, nRed int, m Mapper, p Partitioner, r Reducer) (inMap []chan 
 	return
 }
 
-type Worker struct {
+type worker struct {
 	config      map[string]interface{}
 	id          int
 	role        int
@@ -172,7 +168,7 @@ type Worker struct {
 	reducer     Reducer
 }
 
-func (w *Worker) RunMap() {
+func (w *worker) runMapper() {
 	npeers := len(w.config["workers"].([]interface{}))
 	inMap := make([]chan interface{}, w.ncpu)
 	inPar := make([]chan interface{}, w.ncpu)
@@ -185,7 +181,7 @@ func (w *Worker) RunMap() {
 
 	for i := 0; i < npeers; i++ {
 		inRed[i] = make(chan interface{}, CHANBUF)
-		go w.Shuffle(i, inRed[i], &wgPar)
+		go w.shuffle(i, inRed[i], &wgPar)
 	}
 
 	for i := 0; i < w.ncpu; i++ {
@@ -206,7 +202,7 @@ func (w *Worker) RunMap() {
 	TextFileParallel(w.input, inMap)
 }
 
-func (w *Worker) Shuffle(i int, inRed chan interface{}, wg *sync.WaitGroup) {
+func (w *worker) shuffle(i int, inRed chan interface{}, wg *sync.WaitGroup) {
 	defer wg.Done()
 	dst := w.config["workers"].([]interface{})[i].(string)
 	pipe := NewPipe(dst)
@@ -217,7 +213,7 @@ func (w *Worker) Shuffle(i int, inRed chan interface{}, wg *sync.WaitGroup) {
 	}
 }
 
-func (w *Worker) RunRed() {
+func (w *worker) runReducer() {
 	server := NewServer(
 		w.config["workers"].([]interface{})[w.id].(string),
 		len(w.config["workers"].([]interface{})),
@@ -259,8 +255,11 @@ func (w *Worker) RunRed() {
 	close(outRed)
 }
 
+/*
+ * Run a Mapper or Reducer process in a distributed environment.
+ */
 func RunDistributed(m Mapper, p Partitioner, r Reducer) {
-	w := Worker{}
+	w := worker{}
 	ncpu := runtime.NumCPU()
 	id := flag.Int("id", 0, "What is the reducer id of the worker?")
 	role := flag.Int("role", MAPPER, "What is the role of this worker")
@@ -284,8 +283,8 @@ func RunDistributed(m Mapper, p Partitioner, r Reducer) {
 
 	switch *role {
 	case MAPPER:
-		w.RunMap()
+		w.runMapper()
 	case REDUCER:
-		w.RunRed()
+		w.runReducer()
 	}
 }
