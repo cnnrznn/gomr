@@ -5,10 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"github.com/cnnrznn/gomr"
-	"io/ioutil"
-	"log"
 	"os"
-	"strconv"
 	"strings"
 	"sync"
 )
@@ -16,12 +13,16 @@ import (
 type WordCount struct{}
 
 type Count struct {
-	Key   string
+	key   string
 	Value int
 }
 
+func (c Count) Key() interface{} {
+	return c.key
+}
+
 func (c Count) String() string {
-	return fmt.Sprintf("%v %v", c.Key, c.Value)
+	return fmt.Sprintf("%v %v", c.key, c.Value)
 }
 
 func (w *WordCount) Map(in <-chan interface{}, out chan<- interface{}) {
@@ -43,8 +44,7 @@ func (w *WordCount) Map(in <-chan interface{}, out chan<- interface{}) {
 
 func (w *WordCount) Partition(in <-chan interface{}, outs []chan interface{}, wg *sync.WaitGroup) {
 	for elem := range in {
-		//key := elem.(string)
-		key := elem.(Count).Key
+		key := elem.(Count).key
 
 		h := sha1.New()
 		h.Write([]byte(key))
@@ -53,7 +53,6 @@ func (w *WordCount) Partition(in <-chan interface{}, outs []chan interface{}, wg
 			hash = hash * -1
 		}
 
-		//outs[hash%len(outs)] <- key
 		outs[hash%len(outs)] <- elem
 	}
 
@@ -64,10 +63,8 @@ func (w *WordCount) Reduce(in <-chan interface{}, out chan<- interface{}, wg *sy
 	counts := make(map[string]int)
 
 	for elem := range in {
-		//key := elem.(string)
-		//counts[key]++
 		ct := elem.(Count)
-		counts[ct.Key] += ct.Value
+		counts[ct.key] += ct.Value
 	}
 
 	for k, v := range counts {
@@ -78,17 +75,20 @@ func (w *WordCount) Reduce(in <-chan interface{}, out chan<- interface{}, wg *sy
 }
 
 func main() {
-	log.SetOutput(ioutil.Discard)
+	// Uncomment next line to show debug info
+	//log.SetOutput(ioutil.Discard)
 	wc := &WordCount{}
-	par, _ := strconv.Atoi(os.Args[2])
 
-	ins, out := gomr.RunLocal(par, par, wc, wc, wc)
+	// Uncomment next two lines for static
+	//par, _ := strconv.Atoi(os.Args[2])
+	//ins, out := gomr.RunLocal(par, par, wc, wc, wc)
+
+	// Comment next line for static
+	ins, out := gomr.RunLocalDynamic(wc, wc, wc)
+
 	gomr.TextFileParallel(os.Args[1], ins)
 
 	for count := range out {
-		//for _ = range out {
 		fmt.Println(count)
 	}
-
-	log.Println("Wordcount done!")
 }
