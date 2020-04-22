@@ -12,8 +12,8 @@ program. To build, `cd` into the directory and run `go build`. Then, run with
 
 ## Getting Started
 
-To write your own jobs for go, you need to create and object that satisfies
-the interfaces found in `gomr.go`. Namely:
+To write jobs for GoMR, we first need to create and object that satisfies the
+interfaces found in `gomr.go`. Namely:
 
 ```go 
 type Mapper interface {
@@ -31,4 +31,12 @@ type Reducer interface {
 type Keyer interface {
 	Key() interface{}
 }
+```
+
+Second, we need to supply data to the input channel of the mapper. We can do
+this manually, or use one of the handy methods found in `input.go`:
+
+```go
+inMapChans, outChan := gomr.RunLocalDynamic(wc, wc, wc)
+gomr.TextFileParallel(os.Args[1], inMapChans)
 ```
