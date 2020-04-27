@@ -126,8 +126,8 @@ func RunLocal(nMap, nRed int, m Mapper, p Partitioner, r Reducer) (inMap []chan 
 	inRed := make([]chan interface{}, nRed)
 	outRed = make(chan interface{}, CHANBUF)
 
-	var wgMap, wgRed sync.WaitGroup
-	wgMap.Add(nMap)
+	var wgPar, wgRed sync.WaitGroup
+	wgPar.Add(nMap)
 	wgRed.Add(nRed)
 
 	for i := 0; i < nRed; i++ {
@@ -139,11 +139,11 @@ func RunLocal(nMap, nRed int, m Mapper, p Partitioner, r Reducer) (inMap []chan 
 		inMap[i] = make(chan interface{}, CHANBUF)
 		inPar[i] = make(chan interface{}, CHANBUF)
 		go m.Map(inMap[i], inPar[i])
-		go p.Partition(inPar[i], inRed, &wgMap)
+		go p.Partition(inPar[i], inRed, &wgPar)
 	}
 
 	go func() {
-		wgMap.Wait()
+		wgPar.Wait()
 		for i := 0; i < nRed; i++ {
 			close(inRed[i])
 		}
