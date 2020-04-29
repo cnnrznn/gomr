@@ -62,9 +62,9 @@ func (ls *localShuffle) shuffle(inRed, outRed chan interface{}, wg *sync.WaitGro
 }
 
 /*
- * Architect and MapReduce Job a dynamic number of mappers and reducers. Return
- * to the user a channel for intputing their data
- */
+Architect and MapReduce Job a dynamic number of mappers and reducers. Return
+to the user a channel for intputing their data
+*/
 func RunLocalDynamic(m Mapper, p Partitioner, r Reducer) (inMap []chan interface{},
 	outRed chan interface{}) {
 	nCpu := runtime.NumCPU()
@@ -115,9 +115,9 @@ func RunLocalDynamic(m Mapper, p Partitioner, r Reducer) (inMap []chan interface
 }
 
 /*
- * Architect and MapReduce Job with the following number of mappers and
- * reducers. Return to the user a channel for intputing their data
- */
+Architect and MapReduce Job with the following number of mappers and
+reducers. Return to the user a channel for intputing their data
+*/
 func RunLocal(nMap, nRed int, m Mapper, p Partitioner, r Reducer) (inMap []chan interface{},
 	outRed chan interface{}) {
 
@@ -256,8 +256,8 @@ func (w *worker) runReducer() {
 }
 
 /*
- * Run a Mapper or Reducer process in a distributed environment.
- */
+Run a Mapper or Reducer process in a distributed environment.
+*/
 func RunDistributed(m Mapper, p Partitioner, r Reducer) {
 	w := worker{}
 	ncpu := runtime.NumCPU()
