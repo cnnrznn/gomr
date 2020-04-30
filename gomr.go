@@ -30,6 +30,12 @@ type Reducer interface {
 	Reduce(in <-chan interface{}, out chan<- interface{}, wg *sync.WaitGroup)
 }
 
+type Job interface {
+	Mapper
+	Partitioner
+	Reducer
+}
+
 type Keyer interface {
 	Key() interface{}
 }
@@ -118,7 +124,7 @@ func RunLocalDynamic(m Mapper, p Partitioner, r Reducer) (inMap []chan interface
 Architect and MapReduce Job with the following number of mappers and
 reducers. Return to the user a channel for intputing their data
 */
-func RunLocal(nMap, nRed int, m Mapper, p Partitioner, r Reducer) (inMap []chan interface{},
+func RunLocal(nMap, nRed int, j Job) (inMap []chan interface{},
 	outRed chan interface{}) {
 
 	inMap = make([]chan interface{}, nMap)
@@ -132,14 +138,14 @@ func RunLocal(nMap, nRed int, m Mapper, p Partitioner, r Reducer) (inMap []chan 
 
 	for i := 0; i < nRed; i++ {
 		inRed[i] = make(chan interface{}, CHANBUF)
-		go r.Reduce(inRed[i], outRed, &wgRed)
+		go j.Reduce(inRed[i], outRed, &wgRed)
 	}
 
 	for i := 0; i < nMap; i++ {
 		inMap[i] = make(chan interface{}, CHANBUF)
 		inPar[i] = make(chan interface{}, CHANBUF)
-		go m.Map(inMap[i], inPar[i])
-		go p.Partition(inPar[i], inRed, &wgPar)
+		go j.Map(inMap[i], inPar[i])
+		go j.Partition(inPar[i], inRed, &wgPar)
 	}
 
 	go func() {
