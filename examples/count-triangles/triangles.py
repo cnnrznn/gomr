@@ -2,7 +2,7 @@ from pyspark import SparkContext
 import sys
 
 def toLU(x):
-    ls = x.split(',')
+    ls = x.split()
     v1 = int(ls[0])
     v2 = int(ls[1])
 
@@ -11,6 +11,7 @@ def toLU(x):
     return []
 
 def maxFilter(x):
+    return True
     m = 100000
     ls = x.split(',')
     v1 = int(ls[0])
@@ -19,7 +20,7 @@ def maxFilter(x):
 
 def mymap(x):
     result = []
-    ls = x.split(',')
+    ls = x.split()
     v1 = int(ls[0])
     v2 = int(ls[1])
 
