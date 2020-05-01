@@ -48,12 +48,19 @@ func (pr *Pagerank) Map(in <-chan interface{}, out chan<- interface{}) {
 		v, _ := strconv.Atoi(ls[0])
 		rank, _ := strconv.ParseFloat(ls[1], 64)
 		size := len(pr.g[v])
+
 		for _, peer := range pr.g[v] {
 			out <- Contrib{
 				key: peer,
 				val: rank / float64(size),
 			}
 		}
+
+		if _, ok := pr.g[v]; !ok {
+			out <- Contrib{key: 0, val: rank}
+		}
+
+		out <- Contrib{key: v, val: 0}
 	}
 	close(out)
 }
