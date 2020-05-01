@@ -59,7 +59,7 @@ func (pr *Pagerank) Map(in <-chan interface{}, out chan<- interface{}) {
 	var sink float64 = 0.0
 
 	for e := range in {
-		ls := strings.Split(e.(string), " ")
+		ls := strings.Fields(e.(string))
 		node, _ := strconv.Atoi(ls[0])
 		rank, _ := strconv.ParseFloat(ls[1], 64)
 
@@ -111,7 +111,6 @@ func (pr *Pagerank) Reduce(in <-chan interface{}, out chan<- interface{}, wg *sy
 
 func main() {
 	pr := NewPagerank(os.Args[1])
-	fmt.Println(pr)
 
 	p := runtime.NumCPU()
 	ins, out := gomr.RunLocal(p, p, pr)
