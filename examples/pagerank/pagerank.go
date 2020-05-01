@@ -13,15 +13,26 @@ import (
 	"github.com/cnnrznn/gomr"
 )
 
+/*
+Holds an in-memory representation of the graph and implements Job
+interface
+*/
 type Pagerank struct {
 	g map[int][]int
 }
 
+/*
+Represents a contribution to a pages rank
+*/
 type Contrib struct {
 	key int
 	val float64
 }
 
+/*
+Load the graph into memory as a map from a node (int) to a list
+of its outgoing links ([]int).
+*/
 func NewPagerank(fn string) *Pagerank {
 	g := make(map[int][]int)
 
