@@ -118,16 +118,7 @@ func main() {
 
 	for i := 0; i < 10; i++ {
 		insNext, outNext := gomr.RunLocal(p, p, pr)
-		go func(out chan interface{}) {
-			i := 0
-			for e := range out {
-				insNext[i] <- e
-				i = (i + 1) % len(insNext)
-			}
-			for _, ch := range insNext {
-				close(ch)
-			}
-		}(out)
+		gomr.Chain(out, insNext)
 		out = outNext
 	}
 
