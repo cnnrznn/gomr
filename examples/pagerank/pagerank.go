@@ -54,13 +54,14 @@ func NewPagerank(fn string) *Pagerank {
 }
 
 func (pr *Pagerank) Map(in <-chan interface{}, out chan<- interface{}) {
+	defer close(out)
+
 	var sink float64 = 0.0
 
 	for e := range in {
 		ls := strings.Split(e.(string), " ")
 		node, _ := strconv.Atoi(ls[0])
 		rank, _ := strconv.ParseFloat(ls[1], 64)
-		size := len(pr.g[node])
 
 		// always preserve this node
 		out <- Contrib{key: node, val: 0}
@@ -69,7 +70,7 @@ func (pr *Pagerank) Map(in <-chan interface{}, out chan<- interface{}) {
 		for _, peer := range pr.g[node] {
 			out <- Contrib{
 				key: peer,
-				val: rank / float64(size),
+				val: rank / float64(len(pr.g[node])),
 			}
 		}
 
@@ -83,19 +84,20 @@ func (pr *Pagerank) Map(in <-chan interface{}, out chan<- interface{}) {
 	for k := range pr.g {
 		out <- Contrib{key: k, val: contrib}
 	}
-
-	close(out)
 }
 
 func (pr *Pagerank) Partition(in <-chan interface{}, outs []chan interface{}, wg *sync.WaitGroup) {
+	defer wg.Done()
+
 	for e := range in {
 		key := e.(Contrib).key
 		outs[key%len(outs)] <- e
 	}
-	wg.Done()
 }
 
 func (pr *Pagerank) Reduce(in <-chan interface{}, out chan<- interface{}, wg *sync.WaitGroup) {
+	defer wg.Done()
+
 	newRanks := make(map[int]float64)
 	for e := range in {
 		contrib := e.(Contrib)
@@ -105,7 +107,6 @@ func (pr *Pagerank) Reduce(in <-chan interface{}, out chan<- interface{}, wg *sy
 		v = (0.85 * v) + 0.15
 		out <- fmt.Sprintf("%v %v", k, v)
 	}
-	wg.Done()
 }
 
 func main() {
