@@ -44,7 +44,7 @@ func NewPagerank(fn string) *Pagerank {
 
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
-		ls := strings.Split(scanner.Text(), ",")
+		ls := strings.Split(scanner.Text(), "\t")
 		v1, _ := strconv.Atoi(ls[0])
 		v2, _ := strconv.Atoi(ls[1])
 		g[v1] = append(g[v1], v2)
@@ -54,6 +54,8 @@ func NewPagerank(fn string) *Pagerank {
 }
 
 func (pr *Pagerank) Map(in <-chan interface{}, out chan<- interface{}) {
+	var sink float64 = 0.0
+
 	for e := range in {
 		ls := strings.Split(e.(string), " ")
 		node, _ := strconv.Atoi(ls[0])
@@ -71,16 +73,17 @@ func (pr *Pagerank) Map(in <-chan interface{}, out chan<- interface{}) {
 			}
 		}
 
-		if _, ok := pr.g[node]; ok {
-			continue
-		}
-
-		// if this node does NOT have outgoing
-		contrib := rank / float64(len(pr.g))
-		for k := range pr.g {
-			out <- Contrib{key: k, val: contrib}
+		if _, ok := pr.g[node]; !ok {
+			sink += rank
 		}
 	}
+
+	// disseminate "sink" contribution
+	contrib := sink / float64(len(pr.g))
+	for k := range pr.g {
+		out <- Contrib{key: k, val: contrib}
+	}
+
 	close(out)
 }
 
@@ -107,10 +110,26 @@ func (pr *Pagerank) Reduce(in <-chan interface{}, out chan<- interface{}, wg *sy
 
 func main() {
 	pr := NewPagerank(os.Args[1])
+	fmt.Println(pr)
 
 	p := runtime.NumCPU()
 	ins, out := gomr.RunLocal(p, p, pr)
 	gomr.TextFileParallel(os.Args[2], ins)
+
+	for i := 0; i < 10; i++ {
+		insNext, outNext := gomr.RunLocal(p, p, pr)
+		go func(out chan interface{}) {
+			i := 0
+			for e := range out {
+				insNext[i] <- e
+				i = (i + 1) % len(insNext)
+			}
+			for _, ch := range insNext {
+				close(ch)
+			}
+		}(out)
+		out = outNext
+	}
 
 	for e := range out {
 		fmt.Println(e)
