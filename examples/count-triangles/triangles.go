@@ -23,15 +23,10 @@ func (e *EdgeToTables) Map(in <-chan interface{}, out chan<- interface{}) {
 	localMap := make(map[Edge]bool)
 
 	for elem := range in {
-		ls := strings.Split(elem.(string), ",")
+		ls := strings.Fields(elem.(string))
 		v1, _ := strconv.Atoi(ls[0])
 		v2, _ := strconv.Atoi(ls[1]) // Read edges file and populate map
 		edge := Edge{v1, v2}
-
-		m := 100000
-		if v1 >= m || v2 >= m {
-			continue
-		}
 
 		if v1 > v2 {
 			localMap[edge] = true
@@ -108,7 +103,7 @@ func main() {
 	nRed, _ := strconv.Atoi(os.Args[3])
 	edges := make(map[Edge]bool)
 	e2t := &EdgeToTables{edges, &sync.Mutex{}}
-	inMap, outRed := gomr.RunLocal(nMap, nRed, e2t, e2t, e2t)
+	inMap, outRed := gomr.RunLocal(nMap, nRed, e2t)
 
 	gomr.TextFileParallel(os.Args[1], inMap)
 
