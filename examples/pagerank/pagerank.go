@@ -45,22 +45,30 @@ func NewPagerank(fn string) *Pagerank {
 func (pr *Pagerank) Map(in <-chan interface{}, out chan<- interface{}) {
 	for e := range in {
 		ls := strings.Split(e.(string), " ")
-		v, _ := strconv.Atoi(ls[0])
+		node, _ := strconv.Atoi(ls[0])
 		rank, _ := strconv.ParseFloat(ls[1], 64)
-		size := len(pr.g[v])
+		size := len(pr.g[node])
 
-		for _, peer := range pr.g[v] {
+		// always preserve this node
+		out <- Contrib{key: node, val: 0}
+
+		// if this node has outgoing
+		for _, peer := range pr.g[node] {
 			out <- Contrib{
 				key: peer,
 				val: rank / float64(size),
 			}
 		}
 
-		if _, ok := pr.g[v]; !ok {
-			out <- Contrib{key: 0, val: rank}
+		if _, ok := pr.g[node]; ok {
+			continue
 		}
 
-		out <- Contrib{key: v, val: 0}
+		// if this node does NOT have outgoing
+		contrib := rank / float64(len(pr.g))
+		for k := range pr.g {
+			out <- Contrib{key: k, val: contrib}
+		}
 	}
 	close(out)
 }
@@ -80,6 +88,7 @@ func (pr *Pagerank) Reduce(in <-chan interface{}, out chan<- interface{}, wg *sy
 		newRanks[contrib.key] += contrib.val
 	}
 	for k, v := range newRanks {
+		v = (0.85 * v) + 0.15
 		out <- fmt.Sprintf("%v %v", k, v)
 	}
 	wg.Done()
