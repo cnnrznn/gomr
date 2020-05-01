@@ -1,11 +1,15 @@
 package main
 
 import (
-	"crypto/sha1"
-	"encoding/binary"
+	//"crypto/sha1"
+	//"encoding/binary"
 	"fmt"
 	"github.com/cnnrznn/gomr"
+	"io/ioutil"
+	"log"
 	"os"
+	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -30,7 +34,6 @@ func (w *WordCount) Map(in <-chan interface{}, out chan<- interface{}) {
 
 	for elem := range in {
 		for _, word := range strings.Split(elem.(string), " ") {
-			//out <- word
 			counts[word]++
 		}
 	}
@@ -44,16 +47,12 @@ func (w *WordCount) Map(in <-chan interface{}, out chan<- interface{}) {
 
 func (w *WordCount) Partition(in <-chan interface{}, outs []chan interface{}, wg *sync.WaitGroup) {
 	for elem := range in {
-		key := elem.(Count).key
-
-		h := sha1.New()
-		h.Write([]byte(key))
-		hash := int(binary.BigEndian.Uint64(h.Sum(nil)))
-		if hash < 0 {
-			hash = hash * -1
+		word := elem.(Count).key
+		key := 0
+		if len(word) > 0 {
+			key = int(word[0])
 		}
-
-		outs[hash%len(outs)] <- elem
+		outs[key%len(outs)] <- elem
 	}
 
 	wg.Done()
@@ -76,15 +75,17 @@ func (w *WordCount) Reduce(in <-chan interface{}, out chan<- interface{}, wg *sy
 
 func main() {
 	// Uncomment next line to show debug info
-	//log.SetOutput(ioutil.Discard)
+	log.SetOutput(ioutil.Discard)
 	wc := &WordCount{}
 
 	// Uncomment next two lines for static
-	//par, _ := strconv.Atoi(os.Args[2])
-	//ins, out := gomr.RunLocal(par, par, wc, wc, wc)
+	par, _ := strconv.Atoi(os.Args[2])
+	runtime.GOMAXPROCS(par)
+	//runtime.GOMAXPROCS(0)
+	ins, out := gomr.RunLocal(par, par, wc)
 
 	// Comment next line for static
-	ins, out := gomr.RunLocalDynamic(wc, wc, wc)
+	//ins, out := gomr.RunLocalDynamic(wc, wc, wc)
 
 	gomr.TextFileParallel(os.Args[1], ins)
 
