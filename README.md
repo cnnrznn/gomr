@@ -28,8 +28,10 @@ type Reducer interface {
 	Reduce(in <-chan interface{}, out chan<- interface{}, wg *sync.WaitGroup)
 }
 
-type Keyer interface {
-	Key() interface{}
+type Job interface {
+	Mapper
+	Partitioner
+	Reducer
 }
 ```
 
@@ -37,6 +39,9 @@ Second, we need to supply data to the input channel of the mapper. We can do
 this manually, or use one of the handy methods found in `input.go`:
 
 ```go
-inMapChans, outChan := gomr.RunLocalDynamic(wc, wc, wc)
+inMapChans, outChan := gomr.RunLocal(m, r, wc)
 gomr.TextFileParallel(os.Args[1], inMapChans)
 ```
+
+`m`, `r` are the number of mappers and reducers. `wc` is an object satisfying
+the `Job` interface.
