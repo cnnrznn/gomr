@@ -14,8 +14,8 @@ const (
 	CHANBUF = 4096
 	FILEBUF = 1024 * 1024 * 32
 
-	MAPPER  = 0
-	REDUCER = 1
+	MAPPER = iota
+	REDUCER
 )
 
 type Mapper interface {
