@@ -1,8 +1,6 @@
 package main
 
 import (
-	//"crypto/sha1"
-	//"encoding/binary"
 	"fmt"
 	"github.com/cnnrznn/gomr"
 	"io/ioutil"
