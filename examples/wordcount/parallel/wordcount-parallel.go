@@ -28,7 +28,7 @@ func (w *WordCount) Map(in <-chan interface{}, out chan<- interface{}) {
 	counts := make(map[string]int)
 
 	for elem := range in {
-		for _, word := range strings.Split(elem.(string), " ") {
+		for _, word := range strings.Fields(elem.(string)) {
 			counts[word]++
 		}
 	}
