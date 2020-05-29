@@ -1,9 +1,7 @@
 package gomr
 
-/*
-Chain two Jobs together by feeding the output from one
-Job to the inputs of another.
-*/
+// Chain two Jobs together by feeding the output from one
+// Job to the inputs of another.
 func Chain(in <-chan interface{}, outs []chan interface{}) {
 	go func() {
 		i := 0
