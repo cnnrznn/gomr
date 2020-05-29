@@ -20,7 +20,7 @@ type worker struct {
 }
 
 func (w *worker) runMapper() {
-	npeers := len(w.config["workers"].([]interface{}))
+	npeers := len(w.config["reducers"].([]interface{}))
 	inMap := make([]chan interface{}, w.ncpu)
 	inPar := make([]chan interface{}, w.ncpu)
 	inRed := make([]chan interface{}, npeers)
@@ -55,7 +55,7 @@ func (w *worker) runMapper() {
 
 func (w *worker) shuffle(i int, inRed chan interface{}, wg *sync.WaitGroup) {
 	defer wg.Done()
-	dst := w.config["workers"].([]interface{})[i].(string)
+	dst := w.config["reducers"].([]interface{})[i].(string)
 	pipe := NewPipe(dst)
 	defer pipe.Close()
 
@@ -66,8 +66,8 @@ func (w *worker) shuffle(i int, inRed chan interface{}, wg *sync.WaitGroup) {
 
 func (w *worker) runReducer() {
 	server := NewServer(
-		w.config["workers"].([]interface{})[w.id].(string),
-		len(w.config["workers"].([]interface{})),
+		w.config["reducers"].([]interface{})[w.id].(string),
+		len(w.config["reducers"].([]interface{})),
 	)
 	fromNet := server.Serve()
 	inRed := make(map[interface{}]chan interface{})
