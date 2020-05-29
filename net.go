@@ -14,14 +14,14 @@ type Pipe struct {
 }
 
 type Server struct {
-	addr   string
-	npeers int
+	addr     string
+	nmappers int
 }
 
-func NewServer(addy string, npeers int) *Server {
+func NewServer(addy string, nmappers int) *Server {
 	return &Server{
-		addr:   addy,
-		npeers: npeers,
+		addr:     addy,
+		nmappers: nmappers,
 	}
 }
 
@@ -61,7 +61,7 @@ func (s *Server) Serve() chan interface{} {
 		log.Println("Listening at", s.addr)
 
 		var wg sync.WaitGroup
-		wg.Add(s.npeers)
+		wg.Add(s.nmappers)
 		defer close(ch)
 		defer wg.Wait()
 

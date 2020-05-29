@@ -67,7 +67,7 @@ func (w *worker) shuffle(i int, inRed chan interface{}, wg *sync.WaitGroup) {
 func (w *worker) runReducer() {
 	server := NewServer(
 		w.config["reducers"].([]interface{})[w.id].(string),
-		len(w.config["reducers"].([]interface{})),
+		int(w.config["nmappers"].(float64)),
 	)
 
 	fromNet := server.Serve()
@@ -126,6 +126,8 @@ func RunDistributed(job Job) {
 	w.role = *role
 	w.input = *input
 	w.job = job
+
+	log.Printf("%+v\n", w)
 
 	switch *role {
 	case MAPPER:
