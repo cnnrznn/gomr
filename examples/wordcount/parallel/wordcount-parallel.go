@@ -1,37 +1,34 @@
 package main
 
 import (
+	"crypto/sha1"
+	"encoding/binary"
 	"fmt"
-	"github.com/cnnrznn/gomr"
-	"io/ioutil"
-	"log"
 	"os"
 	"runtime"
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/cnnrznn/gomr"
 )
 
 type WordCount struct{}
 
 type Count struct {
-	key   string
+	Key   string
 	Value int
 }
 
-func (c Count) Key() interface{} {
-	return c.key
-}
-
 func (c Count) String() string {
-	return fmt.Sprintf("%v %v", c.key, c.Value)
+	return fmt.Sprintf("%v %v", c.Key, c.Value)
 }
 
 func (w *WordCount) Map(in <-chan interface{}, out chan<- interface{}) {
 	counts := make(map[string]int)
 
 	for elem := range in {
-		for _, word := range strings.Split(elem.(string), " ") {
+		for _, word := range strings.Fields(elem.(string)) {
 			counts[word]++
 		}
 	}
@@ -45,12 +42,16 @@ func (w *WordCount) Map(in <-chan interface{}, out chan<- interface{}) {
 
 func (w *WordCount) Partition(in <-chan interface{}, outs []chan interface{}, wg *sync.WaitGroup) {
 	for elem := range in {
-		word := elem.(Count).key
-		key := 0
-		if len(word) > 0 {
-			key = int(word[0])
+		key := elem.(Count).Key
+
+		h := sha1.New()
+		h.Write([]byte(key))
+		hash := int(binary.BigEndian.Uint64(h.Sum(nil)))
+		if hash < 0 {
+			hash = hash * -1
 		}
-		outs[key%len(outs)] <- elem
+
+		outs[hash%len(outs)] <- elem
 	}
 
 	wg.Done()
@@ -61,7 +62,7 @@ func (w *WordCount) Reduce(in <-chan interface{}, out chan<- interface{}, wg *sy
 
 	for elem := range in {
 		ct := elem.(Count)
-		counts[ct.key] += ct.Value
+		counts[ct.Key] += ct.Value
 	}
 
 	for k, v := range counts {
@@ -73,7 +74,7 @@ func (w *WordCount) Reduce(in <-chan interface{}, out chan<- interface{}, wg *sy
 
 func main() {
 	// Uncomment next line to show debug info
-	log.SetOutput(ioutil.Discard)
+	//log.SetOutput(ioutil.Discard)
 	wc := &WordCount{}
 
 	// Uncomment next two lines for static
