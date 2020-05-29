@@ -5,9 +5,11 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"github.com/cnnrznn/gomr"
+	"log"
 	"strings"
 	"sync"
+
+	"github.com/cnnrznn/gomr"
 )
 
 type WordCount struct{}
@@ -22,24 +24,38 @@ func (c Count) String() string {
 }
 
 func (w *WordCount) Map(in <-chan interface{}, out chan<- interface{}) {
+	defer close(out)
+
 	counts := make(map[string]int)
 
 	for elem := range in {
-		for _, word := range strings.Split(elem.(string), " ") {
+		for _, word := range strings.Fields(elem.(string)) {
 			counts[word]++
 		}
 	}
 
 	for k, v := range counts {
-		out <- Count{k, v}
+		bs, err := json.Marshal(Count{k, v})
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		out <- bs
 	}
-
-	close(out)
 }
 
 func (w *WordCount) Partition(in <-chan interface{}, outs []chan interface{}, wg *sync.WaitGroup) {
+	defer wg.Done()
+
 	for elem := range in {
-		key := elem.(Count).Key
+		bs := elem.([]byte)
+		ct := Count{}
+		if err := json.Unmarshal(bs, &ct); err != nil {
+			log.Println(err)
+			continue
+		}
+
+		key := ct.Key
 
 		h := sha1.New()
 		h.Write([]byte(key))
@@ -50,11 +66,11 @@ func (w *WordCount) Partition(in <-chan interface{}, outs []chan interface{}, wg
 
 		outs[hash%len(outs)] <- elem
 	}
-
-	wg.Done()
 }
 
 func (w *WordCount) Reduce(in <-chan interface{}, out chan<- interface{}, wg *sync.WaitGroup) {
+	defer wg.Done()
+
 	counts := make(map[string]int)
 
 	for elem := range in {
@@ -67,11 +83,9 @@ func (w *WordCount) Reduce(in <-chan interface{}, out chan<- interface{}, wg *sy
 	for k, v := range counts {
 		out <- Count{k, v}
 	}
-
-	wg.Done()
 }
 
 func main() {
 	wc := &WordCount{}
-	gomr.RunDistributed(wc, wc, wc)
+	gomr.RunDistributed(wc)
 }

@@ -34,7 +34,7 @@ func NewPipe(dst string) *Pipe {
 	return pipe
 }
 
-func handlePipe(conn net.Conn, ch chan []byte, wg *sync.WaitGroup) {
+func handlePipe(conn net.Conn, ch chan interface{}, wg *sync.WaitGroup) {
 	defer wg.Done()
 	dec := json.NewDecoder(conn)
 	for dec.More() {
@@ -48,8 +48,8 @@ func handlePipe(conn net.Conn, ch chan []byte, wg *sync.WaitGroup) {
 	}
 }
 
-func (s *Server) Serve() chan []byte {
-	ch := make(chan []byte)
+func (s *Server) Serve() chan interface{} {
+	ch := make(chan interface{})
 
 	go func() {
 		// Listen for connections
@@ -82,17 +82,12 @@ func (s *Server) Serve() chan []byte {
 	return ch
 }
 
-func (p *Pipe) Transmit(item interface{}) {
+func (p *Pipe) Transmit(item []byte) {
 	if !p.connected {
 		p.Connect()
 	}
 
-	bs, err := json.Marshal(item)
-	if err != nil {
-		log.Println("Error marshalling:", err)
-	}
-
-	p.conn.Write(bs)
+	p.conn.Write(item)
 }
 
 func (p *Pipe) Connect() {

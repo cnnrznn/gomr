@@ -3,7 +3,6 @@ package gomr
 import (
 	"encoding/json"
 	"flag"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"runtime"
@@ -25,29 +24,29 @@ func (w *worker) runMapper() {
 	inPar := make([]chan interface{}, w.ncpu)
 	inRed := make([]chan interface{}, npeers)
 
-	var wgMap, wgPar sync.WaitGroup
-	wgMap.Add(w.ncpu)
-	wgPar.Add(npeers)
-	defer wgPar.Wait()
+	var wgPar, wgShuf sync.WaitGroup
+	wgPar.Add(w.ncpu)
+	wgShuf.Add(npeers)
+	defer wgShuf.Wait()
 
 	for i := 0; i < npeers; i++ {
 		inRed[i] = make(chan interface{}, CHANBUF)
-		go w.shuffle(i, inRed[i], &wgPar)
+		go w.shuffle(i, inRed[i], &wgShuf)
 	}
 
 	for i := 0; i < w.ncpu; i++ {
 		inMap[i] = make(chan interface{}, CHANBUF)
 		inPar[i] = make(chan interface{}, CHANBUF)
-		go w.job.Partition(inPar[i], inRed, &wgMap)
+		go w.job.Partition(inPar[i], inRed, &wgPar)
 		go w.job.Map(inMap[i], inPar[i])
 	}
 
 	go func() {
-		wgMap.Wait()
+		wgPar.Wait()
 		for i := 0; i < npeers; i++ {
 			close(inRed[i])
 		}
-		log.Println("Map done.")
+		log.Println("Map and partition done.")
 	}()
 
 	TextFileParallel(w.input, inMap)
@@ -60,56 +59,46 @@ func (w *worker) shuffle(i int, inRed chan interface{}, wg *sync.WaitGroup) {
 	defer pipe.Close()
 
 	for item := range inRed {
-		pipe.Transmit(item)
+		pipe.Transmit(item.([]byte))
 	}
 }
 
-func (w *worker) runReducer() {
+func (w *worker) runReducer() chan interface{} {
 	server := NewServer(
 		w.config["reducers"].([]interface{})[w.id].(string),
 		len(w.config["reducers"].([]interface{})),
 	)
+
 	fromNet := server.Serve()
-	inRed := make(map[interface{}]chan interface{})
+	inRed := make([]chan interface{}, 10*w.ncpu)
 	outRed := make(chan interface{}, CHANBUF)
-	var wg, wgRed sync.WaitGroup
-	wg.Add(1)
-	defer wg.Wait()
+
+	var wgPar, wgRed sync.WaitGroup
+	wgPar.Add(1)
+	wgRed.Add(len(inRed))
+
+	for i := 0; i < len(inRed); i++ {
+		inRed[i] = make(chan interface{}, CHANBUF)
+		go w.job.Reduce(inRed[i], outRed, &wgRed)
+	}
+
+	go w.job.Partition(fromNet, inRed, &wgPar)
 
 	go func() {
-		defer wg.Done()
-		for out := range outRed {
-			fmt.Println(out)
+		wgPar.Wait()
+		for _, ch := range inRed {
+			close(ch)
 		}
+
+		wgRed.Wait()
+		close(outRed)
 	}()
 
-	for bs := range fromNet {
-		m := make(map[string]interface{})
-		err := json.Unmarshal(bs, &m)
-		if err != nil {
-			log.Println("Error unmarshal:", err)
-		}
-
-		if _, ok := inRed[m["key"]]; !ok {
-			ch := make(chan interface{}, CHANBUF)
-			inRed[m["key"]] = ch
-			wgRed.Add(1)
-			go w.job.Reduce(ch, outRed, &wgRed)
-		}
-		inRed[m["key"]] <- bs
-	}
-
-	for _, v := range inRed {
-		close(v)
-	}
-	wgRed.Wait()
-	close(outRed)
+	return outRed
 }
 
-/*
-Run a Mapper or Reducer process in a distributed environment.
-*/
-func RunDistributed(job Job) {
+// Run a Mapper or Reducer process in a distributed environment.
+func RunDistributed(job Job) chan interface{} {
 	w := worker{}
 	ncpu := runtime.NumCPU()
 	id := flag.Int("id", 0, "What is the reducer id of the worker?")
@@ -135,10 +124,14 @@ func RunDistributed(job Job) {
 	w.input = *input
 	w.job = job
 
+	var ch chan interface{}
+
 	switch *role {
 	case MAPPER:
 		w.runMapper()
 	case REDUCER:
-		w.runReducer()
+		ch = w.runReducer()
 	}
+
+	return ch
 }
