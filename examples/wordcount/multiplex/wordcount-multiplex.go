@@ -4,13 +4,14 @@ import (
 	"crypto/sha1"
 	"encoding/binary"
 	"fmt"
-	"github.com/cnnrznn/gomr"
 	"io/ioutil"
 	"log"
 	"os"
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/cnnrznn/gomr"
 )
 
 type WordCount struct{}
@@ -82,7 +83,7 @@ func main() {
 	wc := &WordCount{}
 	par, _ := strconv.Atoi(os.Args[2])
 
-	ins, out := gomr.RunLocal(par, par, wc, wc, wc)
+	ins, out := gomr.RunLocal(par, par, wc)
 	gomr.TextFileMultiplex(os.Args[1], ins)
 
 	for count := range out {
