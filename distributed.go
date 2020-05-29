@@ -3,6 +3,7 @@ package gomr
 import (
 	"encoding/json"
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"runtime"
@@ -63,7 +64,7 @@ func (w *worker) shuffle(i int, inRed chan interface{}, wg *sync.WaitGroup) {
 	}
 }
 
-func (w *worker) runReducer() chan interface{} {
+func (w *worker) runReducer() {
 	server := NewServer(
 		w.config["reducers"].([]interface{})[w.id].(string),
 		len(w.config["reducers"].([]interface{})),
@@ -94,11 +95,13 @@ func (w *worker) runReducer() chan interface{} {
 		close(outRed)
 	}()
 
-	return outRed
+	for item := range outRed {
+		fmt.Println(item)
+	}
 }
 
 // Run a Mapper or Reducer process in a distributed environment.
-func RunDistributed(job Job) chan interface{} {
+func RunDistributed(job Job) {
 	w := worker{}
 	ncpu := runtime.NumCPU()
 	id := flag.Int("id", 0, "What is the reducer id of the worker?")
@@ -124,14 +127,10 @@ func RunDistributed(job Job) chan interface{} {
 	w.input = *input
 	w.job = job
 
-	var ch chan interface{}
-
 	switch *role {
 	case MAPPER:
 		w.runMapper()
 	case REDUCER:
-		ch = w.runReducer()
+		w.runReducer()
 	}
-
-	return ch
 }
