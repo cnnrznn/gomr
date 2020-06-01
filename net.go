@@ -20,7 +20,8 @@ type server struct {
 
 func newServer(addy string, nmappers int) *server {
 	return &server{
-		addr:     addy,
+		//addr:     addy,
+		addr:     ":3000",
 		nmappers: nmappers,
 	}
 }
