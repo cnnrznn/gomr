@@ -5,63 +5,66 @@ import (
 	"log"
 	"net"
 	"sync"
+	"time"
 )
 
-type Pipe struct {
-	dst       string
-	connected bool
-	conn      net.Conn
+type client struct {
+	dst  string
+	conn net.Conn
 }
 
-type Server struct {
+type server struct {
 	addr     string
 	nmappers int
 }
 
-func NewServer(addy string, nmappers int) *Server {
-	return &Server{
-		addr:     addy,
+func newServer(addy string, nmappers int) *server {
+	return &server{
+		//addr:     addy,
+		addr:     ":3000",
 		nmappers: nmappers,
 	}
 }
 
-func NewPipe(dst string) *Pipe {
-	pipe := &Pipe{
-		dst:       dst,
-		connected: false,
+func newClient(dst string) *client {
+	c := &client{
+		dst: dst,
 	}
-	pipe.Connect()
-	return pipe
+	c.connect()
+	return c
 }
 
-func handlePipe(conn net.Conn, ch chan interface{}, wg *sync.WaitGroup) {
+func handleClient(conn net.Conn, ch chan interface{}, wg *sync.WaitGroup) {
 	defer wg.Done()
 	dec := json.NewDecoder(conn)
 	for dec.More() {
 		m := make(map[string]interface{})
-		dec.Decode(&m)
+		if err := dec.Decode(&m); err != nil {
+			log.Panic(err)
+		}
 		bs, err := json.Marshal(m)
 		if err != nil {
-			log.Println("Error marshal:", err)
+			log.Panic(err)
 		}
 		ch <- bs
 	}
 }
 
-func (s *Server) Serve() chan interface{} {
+func (s *server) serve() chan interface{} {
 	ch := make(chan interface{})
 
 	go func() {
 		// Listen for connections
 		ln, err := net.Listen("tcp", s.addr)
 		if err != nil {
-			log.Println("Error listening:", err)
+			log.Panic("Error listening:", err)
 		}
 		defer ln.Close()
 		log.Println("Listening at", s.addr)
 
 		var wg sync.WaitGroup
 		wg.Add(s.nmappers)
+
 		defer close(ch)
 		defer wg.Wait()
 
@@ -70,11 +73,10 @@ func (s *Server) Serve() chan interface{} {
 				// Open connection
 				conn, err := ln.Accept()
 				if err != nil {
-					log.Println("Error accept:", err)
-					break
+					log.Panic("Error accept:", err)
 				}
 				// Write values to ch
-				go handlePipe(conn, ch, &wg)
+				go handleClient(conn, ch, &wg)
 			}
 		}()
 	}()
@@ -82,28 +84,29 @@ func (s *Server) Serve() chan interface{} {
 	return ch
 }
 
-func (p *Pipe) Transmit(item []byte) {
-	if !p.connected {
-		p.Connect()
+func (c *client) transmit(item []byte) {
+	n, err := c.conn.Write(item)
+	if n != len(item) || err != nil {
+		c.conn.Close()
+		log.Panic(err)
 	}
-
-	p.conn.Write(item)
 }
 
-func (p *Pipe) Connect() {
-	for {
-		conn, err := net.Dial("tcp", p.dst)
+func (c *client) connect() {
+	for i := 0; i < 3; i++ {
+		conn, err := net.Dial("tcp", c.dst)
 		if err == nil {
-			p.conn = conn
-			p.connected = true
+			c.conn = conn
 			return
-		} else {
-			log.Println("Could not connect:", err)
 		}
+
+		log.Println("Could not connect:", err)
+		time.Sleep(50 * time.Millisecond)
 	}
+
+	log.Panic("Could not connect to reducer:", c)
 }
 
-func (p *Pipe) Close() {
-	p.conn.Close()
-	p.connected = false
+func (c *client) close() {
+	c.conn.Close()
 }

@@ -56,21 +56,21 @@ func (w *worker) runMapper() {
 func (w *worker) shuffle(i int, inRed chan interface{}, wg *sync.WaitGroup) {
 	defer wg.Done()
 	dst := w.config["reducers"].([]interface{})[i].(string)
-	pipe := NewPipe(dst)
-	defer pipe.Close()
+	client := newClient(dst)
+	defer client.close()
 
 	for item := range inRed {
-		pipe.Transmit(item.([]byte))
+		client.transmit(item.([]byte))
 	}
 }
 
 func (w *worker) runReducer() {
-	server := NewServer(
+	server := newServer(
 		w.config["reducers"].([]interface{})[w.id].(string),
 		int(w.config["nmappers"].(float64)),
 	)
 
-	fromNet := server.Serve()
+	fromNet := server.serve()
 	inRed := make([]chan interface{}, 10*w.ncpu)
 	outRed := make(chan interface{}, CHANBUF)
 
@@ -100,7 +100,8 @@ func (w *worker) runReducer() {
 	}
 }
 
-// Run a Mapper or Reducer process in a distributed environment.
+// RunDistributed executes a Mapper or Reducer process in a distributed
+// environment.
 func RunDistributed(job Job) {
 	w := worker{}
 	ncpu := runtime.NumCPU()
