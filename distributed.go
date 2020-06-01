@@ -20,17 +20,17 @@ type worker struct {
 }
 
 func (w *worker) runMapper() {
-	npeers := len(w.config["reducers"].([]interface{}))
+	nRed := len(w.config["reducers"].([]interface{}))
 	inMap := make([]chan interface{}, w.ncpu)
 	inPar := make([]chan interface{}, w.ncpu)
-	inRed := make([]chan interface{}, npeers)
+	inRed := make([]chan interface{}, nRed)
 
 	var wgPar, wgShuf sync.WaitGroup
 	wgPar.Add(w.ncpu)
-	wgShuf.Add(npeers)
+	wgShuf.Add(nRed)
 	defer wgShuf.Wait()
 
-	for i := 0; i < npeers; i++ {
+	for i := 0; i < nRed; i++ {
 		inRed[i] = make(chan interface{}, CHANBUF)
 		go w.shuffle(i, inRed[i], &wgShuf)
 	}
@@ -44,7 +44,7 @@ func (w *worker) runMapper() {
 
 	go func() {
 		wgPar.Wait()
-		for i := 0; i < npeers; i++ {
+		for i := 0; i < nRed; i++ {
 			close(inRed[i])
 		}
 		log.Println("Map and partition done.")
