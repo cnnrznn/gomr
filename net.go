@@ -20,8 +20,7 @@ type server struct {
 
 func newServer(addy string, nmappers int) *server {
 	return &server{
-		//addr:     addy,
-		addr:     ":3000",
+		addr:     addy,
 		nmappers: nmappers,
 	}
 }
@@ -69,7 +68,7 @@ func (s *server) serve() chan interface{} {
 		defer wg.Wait()
 
 		go func() {
-			for {
+			for i := 0; i < s.nmappers; i++ {
 				// Open connection
 				conn, err := ln.Accept()
 				if err != nil {
