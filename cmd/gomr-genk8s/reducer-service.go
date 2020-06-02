@@ -10,8 +10,8 @@ spec:
   selector:
     app: reducer-{{ $i }}
   ports:
-  - port: 3000
-    targetPort: mr-port
+    - port: 3000
+      targetPort: mr-port
 ---
 {{ end }}
 `

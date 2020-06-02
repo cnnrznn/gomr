@@ -19,12 +19,12 @@ spec:
       hostname: reducer-{{ $i }}
       restartPolicy: "OnFailure"
       containers:
-      - name: reducer-{{ $i }}
-        args: ["-role=1", "-id={{ dec $i }}"]
-        image: gomr
-        ports:
-        - name: mr-port
-		  containerPort: 3000
+        - name: reducer-{{ $i }}
+          args: ["-role=1", "-id={{ dec $i }}"]
+          image: gomr
+          ports:
+            - name: mr-port
+              containerPort: 3000
 ---
 {{ end }}
 `

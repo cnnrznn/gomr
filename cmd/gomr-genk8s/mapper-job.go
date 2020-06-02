@@ -6,18 +6,18 @@ var mapperJobStr = `
 apiVersion: batch/v1
 kind: Job
 metadata:
-	name: mapper-{{ $i }}
+  name: mapper-{{ $i }}
 spec:
-	template:
-		spec:
-			restartPolicy: "OnFailure"
-			containers:
-			- name: mapper-{{ $i }}
-				args: ["-input={{ $prefix }}.{{ $i }}"]
-				image: gomr
-				ports:
-				- name: mr-port
-				containerPort: 3000
+  template:
+    spec:
+      restartPolicy: "OnFailure"
+      containers:
+        - name: mapper-{{ $i }}
+          args: ["-input={{ $prefix }}.{{ $i }}"]
+          image: gomr
+          ports:
+            - name: mr-port
+              containerPort: 3000
 ---
 {{ end }}
 `
