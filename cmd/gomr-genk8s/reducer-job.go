@@ -1,25 +1,26 @@
 package main
 
 var reducerJobStr = `
+{{ $name := .name }}
 {{range $i := iter 1 .nreducers }}
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: reducer-{{ $i }}
+  name: {{ $name }}-reducer-{{ $i }}
 spec:
   manualSelector: true
   selector:
     matchLabels:
-      app: reducer-{{ $i }}
+      app: {{ $name }}-reducer-{{ $i }}
   template:
     metadata:
       labels:
-        app: reducer-{{ $i }}
+        app: {{ $name }}-reducer-{{ $i }}
     spec:
-      hostname: reducer-{{ $i }}
+      hostname: {{ $name }}-reducer-{{ $i }}
       restartPolicy: "OnFailure"
       containers:
-        - name: reducer-{{ $i }}
+        - name: {{ $name }}-reducer-{{ $i }}
           args: ["-role=1", "-id={{ dec $i }}"]
           image: gomr
           ports:
