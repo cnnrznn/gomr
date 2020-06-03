@@ -107,5 +107,6 @@ func (c *client) connect() {
 }
 
 func (c *client) close() {
+	log.Println("Closing mapper output")
 	c.conn.Close()
 }
