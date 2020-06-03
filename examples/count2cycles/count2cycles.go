@@ -87,7 +87,7 @@ func main() {
 	edges := make(map[Edge]bool)
 	e2t := &EdgeToTables{edges}
 
-	inMap, outRed := gomr.RunLocal(10, 100, e2t, e2t, e2t)
+	inMap, outRed := gomr.RunLocal(10, 100, e2t)
 
 	// Read edges file and populate map
 	file, err := os.Open(os.Args[1])

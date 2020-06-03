@@ -102,5 +102,5 @@ func main() {
 	}
 	log.Println("Done Edge map build")
 
-	gomr.RunDistributed(e2t, e2t, e2t)
+	gomr.RunDistributed(e2t)
 }
