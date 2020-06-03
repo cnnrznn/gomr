@@ -92,7 +92,7 @@ func (c *client) transmit(item []byte) {
 }
 
 func (c *client) connect() {
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 10; i++ {
 		conn, err := net.Dial("tcp", c.dst)
 		if err == nil {
 			c.conn = conn
@@ -100,7 +100,7 @@ func (c *client) connect() {
 		}
 
 		log.Println("Retrying connect:", err)
-		time.Sleep(50 * time.Millisecond)
+		time.Sleep(500 * time.Millisecond)
 	}
 
 	log.Panic("Could not connect to reducer:", c)
