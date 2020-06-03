@@ -6,7 +6,7 @@ import (
 	"sync"
 )
 
-// Architect and MapReduce Job with the following number of mappers and
+// RunLocal architects a mapreduce job with the following number of mappers and
 // reducers. Return to the user a channel for intputing their data
 func RunLocal(nMap, nRed int, j Job) (inMap []chan interface{},
 	outRed chan interface{}) {
@@ -74,15 +74,15 @@ func (ls *localShuffle) shuffle(inRed, outRed chan interface{}, wg *sync.WaitGro
 
 }
 
-// Architect and MapReduce Job a dynamic number of mappers and reducers. Return
-// to the user a channel for intputing their data
+// RunLocalDynamic architects a mapreduce job with a dynamic number of mappers
+// and reducers. Return to the user a channel for intputing their data
 func RunLocalDynamic(m Mapper, p Partitioner, r Reducer) (inMap []chan interface{},
 	outRed chan interface{}) {
-	nCpu := runtime.NumCPU()
+	nCPU := runtime.NumCPU()
 
-	inMap = make([]chan interface{}, nCpu)   // number of mappers == cpus
-	inPar := make([]chan interface{}, nCpu)  // number of partitioners == nMap
-	inRed := make([]chan interface{}, nCpu)  // number of reducer input == cpus
+	inMap = make([]chan interface{}, nCPU)   // number of mappers == cpus
+	inPar := make([]chan interface{}, nCPU)  // number of partitioners == nMap
+	inRed := make([]chan interface{}, nCPU)  // number of reducer input == cpus
 	outRed = make(chan interface{}, CHANBUF) // single output channel
 
 	ls := localShuffle{ // reducer-generator
@@ -90,15 +90,15 @@ func RunLocalDynamic(m Mapper, p Partitioner, r Reducer) (inMap []chan interface
 	}
 
 	var wgPar, wgShuf sync.WaitGroup
-	wgPar.Add(nCpu)
-	wgShuf.Add(nCpu)
+	wgPar.Add(nCPU)
+	wgShuf.Add(nCPU)
 
-	for i := 0; i < nCpu; i++ {
+	for i := 0; i < nCPU; i++ {
 		inRed[i] = make(chan interface{}, CHANBUF)
 		go ls.shuffle(inRed[i], outRed, &wgShuf)
 	}
 
-	for i := 0; i < nCpu; i++ {
+	for i := 0; i < nCPU; i++ {
 		inMap[i] = make(chan interface{}, CHANBUF)
 		inPar[i] = make(chan interface{}, CHANBUF)
 		go p.Partition(inPar[i], inRed, &wgPar)
@@ -109,7 +109,7 @@ func RunLocalDynamic(m Mapper, p Partitioner, r Reducer) (inMap []chan interface
 		wgPar.Wait()
 		log.Println("Map and Partition done.")
 
-		for i := 0; i < nCpu; i++ {
+		for i := 0; i < nCPU; i++ {
 			close(inRed[i])
 		}
 
