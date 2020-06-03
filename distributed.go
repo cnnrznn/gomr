@@ -8,7 +8,6 @@ import (
 	"log"
 	"runtime"
 	"sync"
-	"time"
 )
 
 type worker struct {
@@ -133,7 +132,6 @@ func RunDistributed(job Job) {
 
 	switch *role {
 	case MAPPER:
-		time.Sleep(2000 * time.Millisecond)
 		w.runMapper()
 	case REDUCER:
 		w.runReducer()
