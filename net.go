@@ -99,7 +99,7 @@ func (c *client) connect() {
 			return
 		}
 
-		log.Println("Could not connect:", err)
+		log.Println("Retrying connect:", err)
 		time.Sleep(50 * time.Millisecond)
 	}
 
