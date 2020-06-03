@@ -18,7 +18,7 @@ spec:
         app: {{ $name }}-reducer-{{ $i }}
     spec:
       hostname: {{ $name }}-reducer-{{ $i }}
-      restartPolicy: "OnFailure"
+      restartPolicy: "Never"
       containers:
         - name: {{ $name }}-reducer-{{ $i }}
           args: ["-role=1", "-id={{ dec $i }}"]

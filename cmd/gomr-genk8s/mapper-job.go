@@ -10,7 +10,7 @@ metadata:
 spec:
   template:
     spec:
-      restartPolicy: "OnFailure"
+      restartPolicy: "Never"
       containers:
         - name: mapper-{{ $i }}
           args: ["-input={{ $prefix }}.{{ $i }}"]
