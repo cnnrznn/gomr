@@ -1,22 +1,24 @@
 package gomr
 
 import (
+	"bufio"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
 	"runtime"
 	"sync"
 )
 
 type worker struct {
-	config map[string]interface{}
-	id     int
-	role   int
-	ncpu   int
-	input  string
-	job    Job
+	config        map[string]interface{}
+	id            int
+	role          int
+	ncpu          int
+	input, output string
+	job           Job
 }
 
 func (w *worker) runMapper() {
@@ -95,8 +97,20 @@ func (w *worker) runReducer() {
 		close(outRed)
 	}()
 
+	f, err := os.Create(w.output)
+	if err != nil {
+		log.Panic(err)
+	}
+	defer f.Close()
+
+	wr := bufio.NewWriter(f)
+	defer wr.Flush()
+
 	for item := range outRed {
-		fmt.Println(item)
+		_, err := fmt.Fprintln(wr, item)
+		if err != nil {
+			log.Panic(err)
+		}
 	}
 }
 
@@ -108,6 +122,7 @@ func RunDistributed(job Job) {
 	id := flag.Int("id", 0, "What is the reducer id of the worker?")
 	role := flag.Int("role", MAPPER, "What is the role of this worker")
 	input := flag.String("input", "input.txt", "Path to input file")
+	output := flag.String("output", "output.txt", "Path to output file")
 	configFn := flag.String("conf", "config.json", "Path to a config file for GoMR")
 	flag.Parse()
 
@@ -126,6 +141,7 @@ func RunDistributed(job Job) {
 	w.id = *id
 	w.role = *role
 	w.input = *input
+	w.output = *output
 	w.job = job
 
 	log.Printf("%+v\n", w)
