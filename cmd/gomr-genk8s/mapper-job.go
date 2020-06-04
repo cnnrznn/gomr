@@ -1,7 +1,7 @@
 package main
 
 var mapperJobStr = `
-{{ $prefix := .prefix }}
+{{ $inprefix := .inprefix }}
 {{range $i := iter 1 .nmappers }}
 apiVersion: batch/v1
 kind: Job
@@ -13,7 +13,7 @@ spec:
       restartPolicy: "Never"
       containers:
         - name: mapper-{{ $i }}
-          args: ["-input={{ $prefix }}.{{ $i }}"]
+          args: ["-input={{ $inprefix }}.{{ $i }}"]
           image: gomr
           ports:
             - name: mr-port

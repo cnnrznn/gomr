@@ -14,10 +14,14 @@ import (
 func main() {
 	nmap := flag.Int("nmap", 1, "The number of mappers")
 	nred := flag.Int("nred", 1, "The number of reducers")
-	prefix := flag.String(
-		"prefix",
+	inPrefix := flag.String(
+		"inprefix",
 		"input.txt",
 		"The prefix of the input files")
+	outPrefix := flag.String(
+		"outprefix",
+		"output.txt",
+		"The prefix for the output files")
 	name := flag.String(
 		"name",
 		"gomr",
@@ -32,7 +36,8 @@ func main() {
 		reducers[i-1] = fmt.Sprintf("%v-reducer-%v:3000", *name, i)
 	}
 	config["reducers"] = reducers
-	config["prefix"] = *prefix
+	config["inprefix"] = *inPrefix
+	config["outprefix"] = *outPrefix
 	config["name"] = *name
 
 	bs, err := json.MarshalIndent(config, "", "  ")

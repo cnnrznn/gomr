@@ -2,6 +2,7 @@ package main
 
 var reducerJobStr = `
 {{ $name := .name }}
+{{ $outprefix := .outprefix }}
 {{range $i := iter 1 .nreducers }}
 apiVersion: batch/v1
 kind: Job
@@ -21,7 +22,7 @@ spec:
       restartPolicy: "Never"
       containers:
         - name: {{ $name }}-reducer-{{ $i }}
-          args: ["-role=1", "-id={{ dec $i }}"]
+          args: ["-role=1", "-id={{ dec $i }}", "-output={{ $outprefix }}.{{ $i }}"]
           image: gomr
           ports:
             - name: mr-port
