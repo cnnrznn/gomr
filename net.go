@@ -11,6 +11,7 @@ import (
 type client struct {
 	dst  string
 	conn net.Conn
+	enc  *json.Encoder
 }
 
 type server struct {
@@ -30,6 +31,7 @@ func newClient(dst string) *client {
 		dst: dst,
 	}
 	c.connect()
+	c.enc = json.NewEncoder(c.conn)
 	return c
 }
 
@@ -37,12 +39,8 @@ func handleClient(conn net.Conn, ch chan interface{}, wg *sync.WaitGroup) {
 	defer wg.Done()
 	dec := json.NewDecoder(conn)
 	for dec.More() {
-		m := make(map[string]interface{})
-		if err := dec.Decode(&m); err != nil {
-			log.Panic(err)
-		}
-		bs, err := json.Marshal(m)
-		if err != nil {
+		bs := []byte{}
+		if err := dec.Decode(&bs); err != nil {
 			log.Panic(err)
 		}
 		ch <- bs
@@ -84,9 +82,8 @@ func (s *server) serve() chan interface{} {
 }
 
 func (c *client) transmit(item []byte) {
-	n, err := c.conn.Write(item)
-	if n != len(item) || err != nil {
-		c.conn.Close()
+	if err := c.enc.Encode(item); err != nil {
+		c.close()
 		log.Panic(err)
 	}
 }
