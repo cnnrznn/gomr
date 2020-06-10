@@ -11,9 +11,9 @@ spec:
   template:
     spec:
       volumes:
-        - name: task-pv-storage
+        - name: gomr-pv-storage
           persistentVolumeClaim:
-            claimName: task-pv-claim
+            claimName: gomr-pv-claim
       restartPolicy: "Never"
       containers:
         - name: mapper-{{ $i }}
@@ -21,7 +21,7 @@ spec:
           image: gomr
           volumeMounts:
             - mountPath: "/data"
-              name: task-pv-storage
+              name: gomr-pv-storage
           ports:
             - name: mr-port
               containerPort: 3000

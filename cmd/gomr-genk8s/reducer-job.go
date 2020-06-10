@@ -19,9 +19,9 @@ spec:
         app: {{ $name }}-reducer-{{ $i }}
     spec:
       volumes:
-        - name: task-pv-storage
+        - name: gomr-pv-storage
           persistentVolumeClaim:
-            claimName: task-pv-claim
+            claimName: gomr-pv-claim
       hostname: {{ $name }}-reducer-{{ $i }}
       restartPolicy: "Never"
       containers:
@@ -30,7 +30,7 @@ spec:
           image: gomr
           volumeMounts:
             - mountPath: "/data"
-              name: task-pv-storage
+              name: gomr-pv-storage
           ports:
             - name: mr-port
               containerPort: 3000
