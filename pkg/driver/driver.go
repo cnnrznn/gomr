@@ -1,21 +1,15 @@
 package driver
 
 import (
+	"encoding/json"
 	"flag"
+	"fmt"
 	"os"
 	"path/filepath"
 
 	"k8s.io/client-go/kubernetes"
+	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/tools/clientcmd"
-	//
-	// Uncomment to load all auth plugins
-	// _ "k8s.io/client-go/plugin/pkg/client/auth"
-	//
-	// Or uncomment to load specific auth plugins
-	// _ "k8s.io/client-go/plugin/pkg/client/auth/azure"
-	// _ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
-	// _ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
-	// _ "k8s.io/client-go/plugin/pkg/client/auth/openstack"
 )
 
 // Driver determines the name of the job within the Kubernetes namespace and the
@@ -36,8 +30,19 @@ func NewDriver(name string, nprocs int) *Driver {
 
 // Run Executes a GoMR job on a cluster, monitoring for and re-running on
 // failure.
-func (d *Driver) Run(image string) {
+func (d *Driver) Run(image, input, output string) {
+	mjs, rjs := makeMapJobs(image, input, d.NProcs),
+		makeReduceJobs(image, output, d.NProcs)
 
+	for _, j := range rjs {
+		bs, _ := json.MarshalIndent(j, "", "  ")
+		fmt.Println(string(bs))
+	}
+
+	for _, j := range mjs {
+		bs, _ := json.MarshalIndent(j, "", "  ")
+		fmt.Println(string(bs))
+	}
 }
 
 func getClient() *kubernetes.Clientset {
@@ -62,33 +67,6 @@ func getClient() *kubernetes.Clientset {
 	}
 
 	return clientset
-
-	//for {
-	//	pods, err := clientset.CoreV1().Pods("").List(context.TODO(), metav1.ListOptions{})
-	//	if err != nil {
-	//		panic(err.Error())
-	//	}
-	//	fmt.Printf("There are %d pods in the cluster\n", len(pods.Items))
-
-	//	// Examples for error handling:
-	//	// - Use helper functions like e.g. errors.IsNotFound()
-	//	// - And/or cast to StatusError and use its properties like e.g. ErrStatus.Message
-	//	namespace := "default"
-	//	pod := "example-xxxxx"
-	//	_, err = clientset.CoreV1().Pods(namespace).Get(context.TODO(), pod, metav1.GetOptions{})
-	//	if errors.IsNotFound(err) {
-	//		fmt.Printf("Pod %s in namespace %s not found\n", pod, namespace)
-	//	} else if statusError, isStatus := err.(*errors.StatusError); isStatus {
-	//		fmt.Printf("Error getting pod %s in namespace %s: %v\n",
-	//			pod, namespace, statusError.ErrStatus.Message)
-	//	} else if err != nil {
-	//		panic(err.Error())
-	//	} else {
-	//		fmt.Printf("Found pod %s in namespace %s\n", pod, namespace)
-	//	}
-
-	//	time.Sleep(10 * time.Second)
-	//}
 }
 
 func homeDir() string {
