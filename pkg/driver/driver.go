@@ -31,16 +31,20 @@ func NewDriver(name string, nprocs int) *Driver {
 // Run Executes a GoMR job on a cluster, monitoring for and re-running on
 // failure.
 func (d *Driver) Run(image, input, output string) {
-	mjs, rjs := makeMapJobs(image, input, d.NProcs),
-		makeReduceJobs(image, output, d.NProcs)
+	mjs, rjs, rss := makeJobs(image, input, output, d.NProcs)
+
+	for _, j := range rss {
+		bs, _ := json.MarshalIndent(j, "", " ")
+		fmt.Println(string(bs))
+	}
 
 	for _, j := range rjs {
-		bs, _ := json.MarshalIndent(j, "", "  ")
+		bs, _ := json.MarshalIndent(j, "", " ")
 		fmt.Println(string(bs))
 	}
 
 	for _, j := range mjs {
-		bs, _ := json.MarshalIndent(j, "", "  ")
+		bs, _ := json.MarshalIndent(j, "", " ")
 		fmt.Println(string(bs))
 	}
 }

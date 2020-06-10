@@ -6,6 +6,19 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
+func makeJobs(image, input, output string, nprocs int) (
+	mjs, rjs, rss []unstructured.Unstructured,
+) {
+	// TODO make random string for unique job identifier
+	name := image
+
+	mjs = makeMapJobs(name, input, nprocs)
+	rjs = makeReduceJobs(name, output, nprocs)
+	rss = makeReduceServices(name, nprocs)
+
+	return
+}
+
 func makeMapJobs(name, input string, par int) []unstructured.Unstructured {
 	mapJobs := []unstructured.Unstructured{}
 	for i := 1; i <= par; i++ {
@@ -30,8 +43,11 @@ func makeMapJobs(name, input string, par int) []unstructured.Unstructured {
 							"restartPolicy": "Never",
 							"containers": []map[string]interface{}{
 								{
-									"name":  name,
-									"args":  []string{fmt.Sprintf("-input=%v", input)},
+									"name": name,
+									"args": []string{fmt.Sprintf("-input=%v", input),
+										fmt.Sprintf("-nmappers=%v", par),
+										//fmt.Sprintf("-reducers=%v", reducers),
+									},
 									"image": name,
 									"volumeMounts": []map[string]interface{}{
 										{
@@ -57,7 +73,6 @@ func makeMapJobs(name, input string, par int) []unstructured.Unstructured {
 }
 
 func makeReduceJobs(image, output string, par int) []unstructured.Unstructured {
-	// TODO generate random string for the case of multiple jobs in same namespace
 	reduceJobs := []unstructured.Unstructured{}
 	for i := 1; i <= par; i++ {
 		podName := fmt.Sprintf("%v-reducer-%v", image, i)
@@ -97,7 +112,10 @@ func makeReduceJobs(image, output string, par int) []unstructured.Unstructured {
 									"name": podName,
 									"args": []string{fmt.Sprintf("-output=%v", output),
 										"-role=1",
-										fmt.Sprintf("-id=%v", i)},
+										fmt.Sprintf("-id=%v", i),
+										fmt.Sprintf("-nmappers=%v", par),
+										//fmt.Sprintf("-reducers=%v", reducers),
+									},
 									"image": image,
 									"volumeMounts": []map[string]interface{}{
 										{
@@ -120,4 +138,32 @@ func makeReduceJobs(image, output string, par int) []unstructured.Unstructured {
 		})
 	}
 	return reduceJobs
+}
+
+func makeReduceServices(image string, par int) []unstructured.Unstructured {
+	reducerServices := []unstructured.Unstructured{}
+	for i := 1; i <= par; i++ {
+		podName := fmt.Sprintf("%v-reducer-%v", image, i)
+		reducerServices = append(reducerServices, unstructured.Unstructured{
+			Object: map[string]interface{}{
+				"apiVersion": "v1",
+				"kind":       "Service",
+				"metadata": map[string]interface{}{
+					"name": podName,
+				},
+				"spec": map[string]interface{}{
+					"selector": map[string]interface{}{
+						"app": podName,
+					},
+					"ports": []map[string]interface{}{
+						{
+							"port":       3000,
+							"targetPort": "mr-port",
+						},
+					},
+				},
+			},
+		})
+	}
+	return reducerServices
 }
