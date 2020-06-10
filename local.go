@@ -76,6 +76,11 @@ func (ls *localShuffle) shuffle(inRed, outRed chan interface{}, wg *sync.WaitGro
 
 // RunLocalDynamic architects a mapreduce job with a dynamic number of mappers
 // and reducers. Return to the user a channel for intputing their data
+//
+// **WARNING** to use this function you must be familiar with your data
+// distribution. If the number of keys is large, too much memory will be
+// allocated for the channels and the program will either be slow (swap) or
+// crash.
 func RunLocalDynamic(m Mapper, p Partitioner, r Reducer) (inMap []chan interface{},
 	outRed chan interface{}) {
 	nCPU := runtime.NumCPU()
