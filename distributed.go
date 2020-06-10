@@ -2,27 +2,27 @@ package gomr
 
 import (
 	"bufio"
-	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"runtime"
+	"strings"
 	"sync"
 )
 
 type worker struct {
-	config        map[string]interface{}
 	id            int
 	role          int
 	ncpu          int
 	input, output string
 	job           Job
+	nmappers      int
+	reducers      []string
 }
 
 func (w *worker) runMapper() {
-	nRed := len(w.config["reducers"].([]interface{}))
+	nRed := len(w.reducers)
 	inMap := make([]chan interface{}, w.ncpu)
 	inPar := make([]chan interface{}, w.ncpu)
 	inRed := make([]chan interface{}, nRed)
@@ -57,7 +57,7 @@ func (w *worker) runMapper() {
 
 func (w *worker) shuffle(i int, inRed chan interface{}, wg *sync.WaitGroup) {
 	defer wg.Done()
-	dst := w.config["reducers"].([]interface{})[i].(string)
+	dst := w.reducers[i]
 	client := newClient(dst)
 	defer client.close()
 
@@ -68,8 +68,8 @@ func (w *worker) shuffle(i int, inRed chan interface{}, wg *sync.WaitGroup) {
 
 func (w *worker) runReducer() {
 	server := newServer(
-		w.config["reducers"].([]interface{})[w.id].(string),
-		int(w.config["nmappers"].(float64)),
+		w.reducers[w.id],
+		w.nmappers,
 	)
 
 	fromNet := server.serve()
@@ -123,26 +123,22 @@ func RunDistributed(job Job) {
 	role := flag.Int("role", MAPPER, "What is the role of this worker")
 	input := flag.String("input", "input.txt", "Path to input file")
 	output := flag.String("output", "output.txt", "Path to output file")
-	configFn := flag.String("conf", "config.json", "Path to a config file for GoMR")
+	nmappers := flag.Int("nmappers", 1, "The number of mappers")
+	reducers := flag.String("reducers", "localhost:3000", "A comma seperated list of reducer ports")
 	flag.Parse()
 
-	// open and parse configFn
-	config := make(map[string]interface{})
-	data, err := ioutil.ReadFile(*configFn)
-	if err != nil {
-		log.Fatal("Unable to read config file: ", err)
-	}
-	if err := json.Unmarshal(data, &config); err != nil {
-		log.Fatal(err)
-	}
-
-	w.config = config
 	w.ncpu = ncpu
 	w.id = *id
 	w.role = *role
 	w.input = *input
 	w.output = *output
 	w.job = job
+	w.nmappers = *nmappers
+	w.reducers = []string{}
+
+	for _, red := range strings.Split(*reducers, ",") {
+		w.reducers = append(w.reducers, red)
+	}
 
 	log.Printf("%+v\n", w)
 
