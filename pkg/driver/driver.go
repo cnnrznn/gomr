@@ -6,11 +6,11 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"time"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/dynamic"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/tools/clientcmd"
@@ -39,43 +39,68 @@ func (d *Driver) Run(image, input, output string) {
 	mjs, rjs, rss := makeJobs(image, input, output, d.NProcs)
 	serviceRes := schema.GroupVersionResource{Group: "", Version: "v1", Resource: "services"}
 	jobRes := schema.GroupVersionResource{Group: "batch", Version: "v1", Resource: "jobs"}
+	svcNames := make([]string, d.NProcs)
+	jobNames := make([]string, d.NProcs*2)
 
-	for _, j := range rss {
-		result, err := client.Resource(serviceRes).Namespace("default").Create(context.TODO(), &j, metav1.CreateOptions{})
-		if err != nil {
-			log.Panic(err)
-		}
-		log.Println("Created service: ", result.GetName())
+	watch, err := client.Resource(jobRes).Namespace("default").Watch(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		log.Panic(err)
+	}
 
-		defer func(name string) {
-			err = client.Resource(serviceRes).Namespace("default").Delete(context.TODO(), name, metav1.DeleteOptions{})
+	for {
+		for i, j := range rss {
+			result, err := client.Resource(serviceRes).Namespace("default").Create(context.TODO(), &j, metav1.CreateOptions{})
 			if err != nil {
-				log.Println(err)
+				log.Panic(err)
 			}
-			log.Println("Deleted service")
-		}(result.GetName())
-	}
-
-	for _, j := range rjs {
-		result, err := client.Resource(jobRes).Namespace("default").Create(context.TODO(), &j, metav1.CreateOptions{})
-		if err != nil {
-			log.Panic(err)
+			log.Println("Created service: ", result.GetName())
+			svcNames[i] = result.GetName()
 		}
-		log.Println("Created job: ", result.GetName())
-		defer cleanupJob(client, result.GetName())
-	}
 
-	for _, j := range mjs {
-		result, err := client.Resource(jobRes).Namespace("default").Create(context.TODO(), &j, metav1.CreateOptions{})
-		if err != nil {
-			log.Panic(err)
+		for i, j := range rjs {
+			result, err := client.Resource(jobRes).Namespace("default").Create(context.TODO(), &j, metav1.CreateOptions{})
+			if err != nil {
+				log.Panic(err)
+			}
+			log.Println("Created job: ", result.GetName())
+			jobNames[i] = result.GetName()
 		}
-		log.Println("Created job: ", result.GetName())
-		defer cleanupJob(client, result.GetName())
-	}
 
-	// launch informer and listen for failure/completion events
-	time.Sleep(40 * time.Second)
+		for i, j := range mjs {
+			result, err := client.Resource(jobRes).Namespace("default").Create(context.TODO(), &j, metav1.CreateOptions{})
+			if err != nil {
+				log.Panic(err)
+			}
+			log.Println("Created job: ", result.GetName())
+			jobNames[d.NProcs+i] = result.GetName()
+		}
+
+		success := 0
+		failure := 0
+		for success+failure < d.NProcs*2 {
+			event := <-watch.ResultChan()
+			job := event.Object.(*unstructured.Unstructured)
+			status := job.Object["status"].(map[string]interface{})
+			log.Println(status)
+			if _, ok := status["succeeded"]; ok {
+				success++
+			}
+			if _, ok := status["failed"]; ok {
+				failure++
+			}
+		}
+
+		for _, n := range jobNames {
+			cleanupJob(client, n)
+		}
+		for _, n := range svcNames {
+			cleanupSvc(client, n)
+		}
+
+		if success == d.NProcs*2 {
+			break
+		}
+	}
 }
 
 func cleanupJob(client dynamic.Interface, name string) {
@@ -85,9 +110,18 @@ func cleanupJob(client dynamic.Interface, name string) {
 		PropagationPolicy: &deletePolicy,
 	})
 	if err != nil {
-		log.Println(err)
+		log.Panic(err)
 	}
-	log.Println("Deleted service")
+	log.Printf("Deleted job %v\n", name)
+}
+
+func cleanupSvc(client dynamic.Interface, name string) {
+	serviceRes := schema.GroupVersionResource{Group: "", Version: "v1", Resource: "services"}
+	err := client.Resource(serviceRes).Namespace("default").Delete(context.TODO(), name, metav1.DeleteOptions{})
+	if err != nil {
+		log.Panic(err)
+	}
+	log.Printf("Deleted service %v\n", name)
 }
 
 func getClient() dynamic.Interface {
