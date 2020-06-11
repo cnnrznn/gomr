@@ -2,6 +2,7 @@ package driver
 
 import (
 	"fmt"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -12,16 +13,24 @@ func makeJobs(image, input, output string, nprocs int) (
 	// TODO make random string for unique job identifier
 	name := image
 
-	mjs = makeMapJobs(name, input, nprocs)
-	rjs = makeReduceJobs(name, output, nprocs)
+	mjs = makeMapJobs(image, name, input, nprocs)
+	rjs = makeReduceJobs(image, name, output, nprocs)
 	rss = makeReduceServices(name, nprocs)
 
 	return
 }
 
-func makeMapJobs(name, input string, par int) []unstructured.Unstructured {
+func reducerList(name string, nprocs int) string {
+	reducers := []string{}
+	for i := 1; i <= nprocs; i++ {
+		reducers = append(reducers, fmt.Sprintf("%v-reducer-%v:3000", name, i))
+	}
+	return strings.Join(reducers, ",")
+}
+
+func makeMapJobs(image, name, input string, nprocs int) []unstructured.Unstructured {
 	mapJobs := []unstructured.Unstructured{}
-	for i := 1; i <= par; i++ {
+	for i := 1; i <= nprocs; i++ {
 		mapJobs = append(mapJobs, unstructured.Unstructured{
 			Object: map[string]interface{}{
 				"apiVersion": "batch/v1",
@@ -43,12 +52,13 @@ func makeMapJobs(name, input string, par int) []unstructured.Unstructured {
 							"restartPolicy": "Never",
 							"containers": []map[string]interface{}{
 								{
-									"name": name,
-									"args": []string{fmt.Sprintf("-input=%v", input),
-										fmt.Sprintf("-nmappers=%v", par),
-										//fmt.Sprintf("-reducers=%v", reducers),
+									"imagePullPolicy": "Never",
+									"name":            name,
+									"args": []string{fmt.Sprintf("-input=%v.%v", input, i),
+										fmt.Sprintf("-nmappers=%v", nprocs),
+										fmt.Sprintf("-reducers=%v", reducerList(name, nprocs)),
 									},
-									"image": name,
+									"image": image,
 									"volumeMounts": []map[string]interface{}{
 										{
 											"mountPath": "/data",
@@ -72,10 +82,10 @@ func makeMapJobs(name, input string, par int) []unstructured.Unstructured {
 	return mapJobs
 }
 
-func makeReduceJobs(image, output string, par int) []unstructured.Unstructured {
+func makeReduceJobs(image, name, output string, nprocs int) []unstructured.Unstructured {
 	reduceJobs := []unstructured.Unstructured{}
-	for i := 1; i <= par; i++ {
-		podName := fmt.Sprintf("%v-reducer-%v", image, i)
+	for i := 1; i <= nprocs; i++ {
+		podName := fmt.Sprintf("%v-reducer-%v", name, i)
 		reduceJobs = append(reduceJobs, unstructured.Unstructured{
 			Object: map[string]interface{}{
 				"apiVersion": "batch/v1",
@@ -109,12 +119,14 @@ func makeReduceJobs(image, output string, par int) []unstructured.Unstructured {
 							"hostname":      podName,
 							"containers": []map[string]interface{}{
 								{
-									"name": podName,
-									"args": []string{fmt.Sprintf("-output=%v", output),
+									"imagePullPolicy": "Never",
+									"name":            podName,
+									"args": []string{
 										"-role=1",
-										fmt.Sprintf("-id=%v", i),
-										fmt.Sprintf("-nmappers=%v", par),
-										//fmt.Sprintf("-reducers=%v", reducers),
+										fmt.Sprintf("-output=%v.%v", output, i),
+										fmt.Sprintf("-id=%v", i-1),
+										fmt.Sprintf("-nmappers=%v", nprocs),
+										fmt.Sprintf("-reducers=%v", reducerList(name, nprocs)),
 									},
 									"image": image,
 									"volumeMounts": []map[string]interface{}{
@@ -140,10 +152,10 @@ func makeReduceJobs(image, output string, par int) []unstructured.Unstructured {
 	return reduceJobs
 }
 
-func makeReduceServices(image string, par int) []unstructured.Unstructured {
+func makeReduceServices(name string, nprocs int) []unstructured.Unstructured {
 	reducerServices := []unstructured.Unstructured{}
-	for i := 1; i <= par; i++ {
-		podName := fmt.Sprintf("%v-reducer-%v", image, i)
+	for i := 1; i <= nprocs; i++ {
+		podName := fmt.Sprintf("%v-reducer-%v", name, i)
 		reducerServices = append(reducerServices, unstructured.Unstructured{
 			Object: map[string]interface{}{
 				"apiVersion": "v1",

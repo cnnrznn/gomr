@@ -2,12 +2,11 @@ package driver
 
 import (
 	"context"
-	"encoding/json"
 	"flag"
-	"fmt"
 	"log"
 	"os"
 	"path/filepath"
+	"time"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
@@ -37,35 +36,58 @@ func NewDriver(name string, nprocs int) *Driver {
 // failure.
 func (d *Driver) Run(image, input, output string) {
 	client := getClient()
-	_, _, rss := makeJobs(image, input, output, d.NProcs)
-	//mjs, rjs, rss := makeJobs(image, input, output, d.NProcs)
+	mjs, rjs, rss := makeJobs(image, input, output, d.NProcs)
 	serviceRes := schema.GroupVersionResource{Group: "", Version: "v1", Resource: "services"}
+	jobRes := schema.GroupVersionResource{Group: "batch", Version: "v1", Resource: "jobs"}
 
 	for _, j := range rss {
-		bs, _ := json.MarshalIndent(j, "", " ")
-		fmt.Println(string(bs))
 		result, err := client.Resource(serviceRes).Namespace("default").Create(context.TODO(), &j, metav1.CreateOptions{})
 		if err != nil {
 			log.Panic(err)
 		}
 		log.Println("Created service: ", result.GetName())
 
-		err = client.Resource(serviceRes).Namespace("default").Delete(context.TODO(), result.GetName(), metav1.DeleteOptions{})
+		defer func(name string) {
+			err = client.Resource(serviceRes).Namespace("default").Delete(context.TODO(), name, metav1.DeleteOptions{})
+			if err != nil {
+				log.Println(err)
+			}
+			log.Println("Deleted service")
+		}(result.GetName())
+	}
+
+	for _, j := range rjs {
+		result, err := client.Resource(jobRes).Namespace("default").Create(context.TODO(), &j, metav1.CreateOptions{})
 		if err != nil {
 			log.Panic(err)
 		}
-		log.Println("Deleted service")
+		log.Println("Created job: ", result.GetName())
+		defer cleanupJob(client, result.GetName())
 	}
 
-	//for _, j := range rjs {
-	//	bs, _ := json.MarshalIndent(j, "", " ")
-	//	fmt.Println(string(bs))
-	//}
+	for _, j := range mjs {
+		result, err := client.Resource(jobRes).Namespace("default").Create(context.TODO(), &j, metav1.CreateOptions{})
+		if err != nil {
+			log.Panic(err)
+		}
+		log.Println("Created job: ", result.GetName())
+		defer cleanupJob(client, result.GetName())
+	}
 
-	//for _, j := range mjs {
-	//	bs, _ := json.MarshalIndent(j, "", " ")
-	//	fmt.Println(string(bs))
-	//}
+	// launch informer and listen for failure/completion events
+	time.Sleep(40 * time.Second)
+}
+
+func cleanupJob(client dynamic.Interface, name string) {
+	jobRes := schema.GroupVersionResource{Group: "batch", Version: "v1", Resource: "jobs"}
+	deletePolicy := metav1.DeletePropagationForeground
+	err := client.Resource(jobRes).Namespace("default").Delete(context.TODO(), name, metav1.DeleteOptions{
+		PropagationPolicy: &deletePolicy,
+	})
+	if err != nil {
+		log.Println(err)
+	}
+	log.Println("Deleted service")
 }
 
 func getClient() dynamic.Interface {
