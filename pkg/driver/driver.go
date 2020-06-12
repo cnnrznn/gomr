@@ -36,7 +36,6 @@ func NewDriver(name string, nprocs int) *Driver {
 // failure.
 func (d *Driver) Run(image, input, output string) {
 	client := getClient()
-	mjs, rjs, rss := makeJobs(image, input, output, d.NProcs)
 	serviceRes := schema.GroupVersionResource{Group: "", Version: "v1", Resource: "services"}
 	jobRes := schema.GroupVersionResource{Group: "batch", Version: "v1", Resource: "jobs"}
 	svcNames := make([]string, d.NProcs)
@@ -48,6 +47,8 @@ func (d *Driver) Run(image, input, output string) {
 	}
 
 	for {
+		mjs, rjs, rss := makeJobs(image, input, output, d.NProcs)
+
 		for i, j := range rss {
 			result, err := client.Resource(serviceRes).Namespace("default").Create(context.TODO(), &j, metav1.CreateOptions{})
 			if err != nil {
@@ -105,7 +106,7 @@ func (d *Driver) Run(image, input, output string) {
 
 func cleanupJob(client dynamic.Interface, name string) {
 	jobRes := schema.GroupVersionResource{Group: "batch", Version: "v1", Resource: "jobs"}
-	deletePolicy := metav1.DeletePropagationForeground
+	deletePolicy := metav1.DeletePropagationBackground
 	err := client.Resource(jobRes).Namespace("default").Delete(context.TODO(), name, metav1.DeleteOptions{
 		PropagationPolicy: &deletePolicy,
 	})

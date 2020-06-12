@@ -1,7 +1,9 @@
 package driver
 
 import (
+	"crypto/rand"
 	"fmt"
+	"log"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -11,7 +13,11 @@ func makeJobs(image, input, output string, nprocs int) (
 	mjs, rjs, rss []unstructured.Unstructured,
 ) {
 	// TODO make random string for unique job identifier
-	name := image
+	guid := make([]byte, 16)
+	if _, err := rand.Read(guid); err != nil {
+		log.Panic(err)
+	}
+	name := fmt.Sprintf("%v-%x", image, guid)
 
 	mjs = makeMapJobs(image, name, input, nprocs)
 	rjs = makeReduceJobs(image, name, output, nprocs)
