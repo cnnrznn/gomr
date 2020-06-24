@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"runtime"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -73,18 +72,10 @@ func (w *WordCount) Reduce(in <-chan interface{}, out chan<- interface{}, wg *sy
 }
 
 func main() {
-	// Uncomment next line to show debug info
-	//log.SetOutput(ioutil.Discard)
 	wc := &WordCount{}
 
-	// Uncomment next two lines for static
-	par, _ := strconv.Atoi(os.Args[2])
-	runtime.GOMAXPROCS(par)
-	//runtime.GOMAXPROCS(0)
-	ins, out := gomr.RunLocal(par, par, wc)
-
-	// Comment next line for static
-	//ins, out := gomr.RunLocalDynamic(wc, wc, wc)
+	nprocs := runtime.NumCPU()
+	ins, out := gomr.RunLocal(nprocs, nprocs, wc)
 
 	gomr.TextFileParallel(os.Args[1], ins)
 
