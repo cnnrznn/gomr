@@ -1,10 +1,8 @@
 package worker
 
 import (
-	"bufio"
-	"os"
-
 	"github.com/cnnrznn/gomr"
+	"github.com/cnnrznn/gomr/store"
 )
 
 const (
@@ -21,31 +19,26 @@ func New(p gomr.Processor) *Worker {
 	}
 }
 
-func (w *Worker) Map(inputs []string) error {
+func (w *Worker) Map(inputs []store.Store) error {
 	var inErr, outErr error
 
 	inChan := make(chan any, CHANBUF)
 	outChan := make(chan gomr.Keyer, CHANBUF)
 
-	outs := make(map[string]bufio.Writer)
+	outs := make(map[string]store.Store)
 
 	go w.Processor.Map(inChan, outChan)
 
 	go func() {
 		for _, input := range inputs {
-			file, err := os.Open(input)
-			if err != nil {
-				// do something
-				inErr = err
-				return
-			}
-			defer file.Close()
+			for input.More() {
+				data, err := input.Read()
+				if err != nil {
+					inErr = err
+					return
+				}
 
-			// pipe contents to mapper
-			scanner := bufio.NewScanner(file)
-
-			for scanner.Scan() {
-				inChan <- scanner.Text()
+				inChan <- data
 			}
 		}
 
@@ -56,13 +49,14 @@ func (w *Worker) Map(inputs []string) error {
 		key := row.Key()
 
 		if _, ok := outs[key]; !ok {
-			file, err := os.Create()
-			outs[key] = 
+			outs[key] = &store.MemStore{}
 		}
 
-		// check if key has file
-		// if not there, create
-		// output row to file
+		err := outs[key].Write(row.String())
+		if err != nil {
+			outErr = err
+			break
+		}
 	}
 
 	if inErr != nil {
