@@ -63,7 +63,7 @@ func TextFileParallel(fn string, inMap []chan interface{}) {
 
 	for i := 0; i < nChunks; i++ {
 		go func(i int) {
-			buffer := make([]byte, FILEBUF)
+			buffer := make([]byte, 8198)
 			atEOF := false
 			skippedFirst := false
 
