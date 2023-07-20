@@ -2,7 +2,6 @@ package gomr
 
 import (
 	"fmt"
-	"sync"
 )
 
 type Mapper interface {
@@ -10,7 +9,7 @@ type Mapper interface {
 }
 
 type Reducer interface {
-	Reduce(in <-chan any, out chan<- any, wg *sync.WaitGroup)
+	Reduce(in <-chan any, out chan<- any)
 }
 
 type Processor interface {
