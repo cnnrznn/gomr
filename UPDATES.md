@@ -13,6 +13,9 @@ From narrowest to wides scope:
 - [Tier 2] Second level moves files between machines. When map tasks have output all of their data, those outputs need to be sent to the appropriate reducer
 - [Tier 3] Third level coordinates job initialization. User code needs to be sent to process on a server somehow
 
+The next step is to design a storage layer for use within Tier 1.
+Tier 1 should receive a list of stores as input, and create and close stores for output.
+
 ### July 13, 2023
 
 This project has a lot of attention! At least, more than my other repositories.

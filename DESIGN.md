@@ -39,8 +39,6 @@ Third level coordinates job initialization. User code needs to be sent to proces
 2. Map functions are narrow and can be performed locally
 3. Reduce functions are wide and require a shuffle + map
 
-## Architecture
-
 ### Workflow
 
 1. Driver program communicates with user
