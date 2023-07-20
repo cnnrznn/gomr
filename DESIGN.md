@@ -53,3 +53,9 @@ Intermediate data is a problem that has a lot of room for optimization.
 ## File conventions
 
 Intermediate data is everywhere, and I need a convention for naming files.
+
+One idea for a format:
+
+- mapper input: `job-name.in.<number>` - where there is a number for each worker
+- reducer input: `job-name.map.<number>.<key>` - each machine has could have an output for key `<key>`
+- reducer output: `job-name.reduce.<key>` - a machine will produce one output file for every key it reduces
