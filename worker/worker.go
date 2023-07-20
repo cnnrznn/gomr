@@ -19,7 +19,7 @@ func New(p gomr.Processor) *Worker {
 	}
 }
 
-func (w *Worker) Map(inputs []store.Store) error {
+func (w *Worker) Map(inputs []store.Store) ([]store.Store, error) {
 	var inErr, outErr error
 
 	inChan := make(chan any, CHANBUF)
@@ -60,11 +60,16 @@ func (w *Worker) Map(inputs []store.Store) error {
 	}
 
 	if inErr != nil {
-		return inErr
+		return []store.Store{}, inErr
 	}
 	if outErr != nil {
-		return outErr
+		return []store.Store{}, outErr
 	}
 
-	return nil
+	result := []store.Store{}
+	for _, s := range outs {
+		result = append(result, s)
+	}
+
+	return result, nil
 }
