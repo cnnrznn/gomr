@@ -1,7 +1,7 @@
 package store
 
 type Store interface {
-	Read() (string, error)
+	Read() (any, error)
 	Write(v any) error
 	Init(c Config) error
 	More() bool
