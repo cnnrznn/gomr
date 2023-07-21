@@ -9,19 +9,18 @@ const (
 	CHANBUF = 1024
 )
 
-type Worker struct {
+type Tier1 struct {
 	Processor gomr.Processor
 }
 
-func New(p gomr.Processor) *Worker {
-	return &Worker{
+func New(p gomr.Processor) *Tier1 {
+	return &Tier1{
 		Processor: p,
 	}
 }
 
-func (w *Worker) Map(inputs []store.Store) ([]store.Store, error) {
-	var inErr, outErr error
-
+func (w *Tier1) Map(inputs []store.Store) ([]store.Store, error) {
+	var problem error
 	inChan := make(chan any, CHANBUF)
 	outChan := make(chan gomr.Keyer, CHANBUF)
 
@@ -30,19 +29,10 @@ func (w *Worker) Map(inputs []store.Store) ([]store.Store, error) {
 	go w.Processor.Map(inChan, outChan)
 
 	go func() {
-		for _, input := range inputs {
-			for input.More() {
-				data, err := input.Read()
-				if err != nil {
-					inErr = err
-					return
-				}
-
-				inChan <- data
-			}
+		err := feed(inputs, inChan)
+		if err != nil {
+			problem = err
 		}
-
-		close(inChan)
 	}()
 
 	for row := range outChan {
@@ -52,18 +42,15 @@ func (w *Worker) Map(inputs []store.Store) ([]store.Store, error) {
 			outs[key] = &store.MemStore{}
 		}
 
-		err := outs[key].Write(row.String())
+		err := outs[key].Write(row)
 		if err != nil {
-			outErr = err
+			problem = err
 			break
 		}
 	}
 
-	if inErr != nil {
-		return []store.Store{}, inErr
-	}
-	if outErr != nil {
-		return []store.Store{}, outErr
+	if problem != nil {
+		return nil, problem
 	}
 
 	result := []store.Store{}
@@ -72,4 +59,53 @@ func (w *Worker) Map(inputs []store.Store) ([]store.Store, error) {
 	}
 
 	return result, nil
+}
+
+func (w *Tier1) Reduce(inputs []store.Store) (store.Store, error) {
+	var problem error
+	inChan := make(chan any, CHANBUF)
+	outChan := make(chan any, CHANBUF)
+
+	result := &store.MemStore{}
+	result.Init(store.Config{
+		//Name: <name>
+	})
+
+	go w.Processor.Reduce(inChan, outChan)
+
+	go func() {
+		err := feed(inputs, inChan)
+		if err != nil {
+			problem = err
+		}
+	}()
+
+	for row := range outChan {
+		err := result.Write(row)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if problem != nil {
+		return nil, problem
+	}
+
+	return result, nil
+}
+
+func feed(stores []store.Store, inChan chan any) error {
+	for _, input := range stores {
+		for input.More() {
+			data, err := input.Read()
+			if err != nil {
+				return err
+			}
+
+			inChan <- data
+		}
+	}
+
+	close(inChan)
+	return nil
 }

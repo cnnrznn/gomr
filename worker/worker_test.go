@@ -12,20 +12,17 @@ type TestProcessor struct {
 }
 
 type Data struct {
-	val string
-}
-
-func (d Data) String() string {
-	return d.val
+	key   string
+	count int
 }
 
 func (d Data) Key() string {
-	return d.val
+	return d.key
 }
 
 func (t *TestProcessor) Map(in <-chan any, out chan<- gomr.Keyer) {
 	for elem := range in {
-		data := Data{val: elem.(string)}
+		data := Data{key: elem.(string), count: 1}
 		out <- data
 	}
 	close(out)
@@ -33,12 +30,14 @@ func (t *TestProcessor) Map(in <-chan any, out chan<- gomr.Keyer) {
 
 func (t *TestProcessor) Reduce(in <-chan any, out chan<- any) {
 	sum := 0
+	key := ""
 
-	for _ = range in {
-		sum++
+	for elem := range in {
+		sum += elem.(Data).count
+		key = elem.(Data).key
 	}
 
-	out <- sum
+	out <- Data{key: key, count: sum}
 	close(out)
 }
 
@@ -62,4 +61,20 @@ func TestWorkerMap(t *testing.T) {
 	for _, out := range outs {
 		fmt.Println(out)
 	}
+}
+
+func TestWorkerReduce(t *testing.T) {
+	w := New(&TestProcessor{})
+
+	s := &store.MemStore{}
+	s.Write(Data{"is", 1})
+	s.Write(Data{"is", 1})
+	s.Write(Data{"is", 1})
+
+	out, err := w.Reduce([]store.Store{s})
+	if err != nil {
+		t.Error(err)
+	}
+
+	fmt.Println(out)
 }
