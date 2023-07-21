@@ -1,5 +1,37 @@
 ## Updates
 
+### July 21, 2023
+
+Implemented Tier 1 operations.
+This includes reading data from stores to be processed by both the map and reduce logic.
+
+The API for Tier 1 currently is:
+
+#### Map
+
+`Map([]Store) []Store, error`
+
+The map tasks takes a list of data stores, loops over each store and feeds the input to the map task.
+It reads the resulting rows and produces a set of `Store`'s as output.
+It produces exactly 1 store for each unique key produced by the mapper.
+
+#### Reduce
+`Reduce([]Store) Store, error`
+
+The reduce tasks takes a list of stores that all pertain to the same reduce key.
+After the shuffle, all stores relating to the same key should be present on the same machine, and be fed to the same Reduce task.
+
+GoMR's reducer is designed as a subroutine that consumes a channel of elements all for the same key, and performs whatever reduce logic it wants to produce an output stream.
+
+The Tier1 reduce task combines the output for a single reduce task into a single output store.
+
+#### Next steps
+
+The next step in the project will be designing and implementing Tier 2.
+Tier 2 will provide Tier 1 with input and consume its output.
+Tier 2 will prepare and process result stores to be consumed by the correct processor.
+Essentially, Tier 2 executes the "shuffle" logic on resulting data stores.
+
 ### July 20, 2023
 
 Beginnin rework.
