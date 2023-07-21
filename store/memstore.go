@@ -5,7 +5,7 @@ import (
 )
 
 type MemStore struct {
-	Data []string
+	Data []any
 	curr int
 }
 
@@ -21,7 +21,7 @@ func (m *MemStore) More() bool {
 	return false
 }
 
-func (m *MemStore) Read() (string, error) {
+func (m *MemStore) Read() (any, error) {
 	if m.curr >= len(m.Data) {
 		return "", fmt.Errorf("Reading past buffer")
 	}
@@ -33,8 +33,7 @@ func (m *MemStore) Read() (string, error) {
 }
 
 func (m *MemStore) Write(v any) error {
-	entry := v.(string)
-	m.Data = append(m.Data, entry)
+	m.Data = append(m.Data, v)
 
 	return nil
 }
