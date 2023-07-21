@@ -1,9 +1,5 @@
 package gomr
 
-import (
-	"fmt"
-)
-
 type Mapper interface {
 	Map(in <-chan any, out chan<- Keyer)
 }
@@ -19,7 +15,6 @@ type Processor interface {
 
 type Keyer interface {
 	Key() string
-	fmt.Stringer
 }
 
 type Job struct {
