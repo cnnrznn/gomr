@@ -18,7 +18,15 @@ type Keyer interface {
 }
 
 type Job struct {
-	Proc Processor
+	Proc    Processor
+	Name    string
+	Cluster Cluster
 
 	// other stuff in the future
+	// ex. Filesize int
+}
+
+type Cluster struct {
+	Nodes []string // <ip>:<port>
+	Self  int      // which index am I?
 }

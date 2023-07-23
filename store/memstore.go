@@ -23,7 +23,7 @@ func (m *MemStore) More() bool {
 
 func (m *MemStore) Read() (any, error) {
 	if m.curr >= len(m.Data) {
-		return "", fmt.Errorf("Reading past buffer")
+		return nil, fmt.Errorf("Reading past buffer")
 	}
 
 	entry := m.Data[m.curr]
