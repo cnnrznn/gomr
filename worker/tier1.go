@@ -19,7 +19,7 @@ func New(p gomr.Processor) *Tier1 {
 	}
 }
 
-func (w *Tier1) Map(inputs []store.Store) ([]store.Store, error) {
+func (w *Tier1) transform(inputs []store.Store) ([]store.Store, error) {
 	var problem error
 	inChan := make(chan any, CHANBUF)
 	outChan := make(chan gomr.Keyer, CHANBUF)
@@ -61,7 +61,7 @@ func (w *Tier1) Map(inputs []store.Store) ([]store.Store, error) {
 	return result, nil
 }
 
-func (w *Tier1) Reduce(inputs []store.Store) (store.Store, error) {
+func (w *Tier1) reduce(inputs []store.Store) (store.Store, error) {
 	var problem error
 	inChan := make(chan any, CHANBUF)
 	outChan := make(chan any, CHANBUF)

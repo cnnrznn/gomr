@@ -53,7 +53,7 @@ func TestWorkerMap(t *testing.T) {
 	stores := []store.Store{}
 	stores = append(stores, s)
 
-	outs, err := w.Map(stores)
+	outs, err := w.transform(stores)
 	if err != nil {
 		t.Error(err)
 	}
@@ -71,10 +71,15 @@ func TestWorkerReduce(t *testing.T) {
 	s.Write(Data{"is", 1})
 	s.Write(Data{"is", 1})
 
-	out, err := w.Reduce([]store.Store{s})
+	out, err := w.reduce([]store.Store{s})
 	if err != nil {
 		t.Error(err)
 	}
 
-	fmt.Println(out)
+	out.Init(store.Config{})
+	data, _ := out.Read()
+
+	if data.(Data).count != 3 {
+		t.Errorf("Expecting a count of 3, got %v", data.(Data).count)
+	}
 }
