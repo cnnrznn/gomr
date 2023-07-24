@@ -1,11 +1,11 @@
 package gomr
 
 type Mapper interface {
-	Map(in <-chan any, out chan<- Keyer)
+	Map(in <-chan []byte, out chan<- Keyer) error
 }
 
 type Reducer interface {
-	Reduce(in <-chan any, out chan<- any)
+	Reduce(in <-chan []byte, out chan<- any) error
 }
 
 type Processor interface {
