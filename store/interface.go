@@ -3,8 +3,8 @@ package store
 type Store interface {
 	Init(c Config) error
 	More() bool
-	Read() (any, error)
-	Write(v any) error
+	Read() ([]byte, error)
+	Write(bs []byte) error
 }
 
 type Config struct {
