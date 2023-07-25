@@ -95,6 +95,8 @@ func (w *Tier1) reduce(inputs []store.Store) (store.Store, error) {
 }
 
 func feed(stores []store.Store, inChan chan any) error {
+	defer close(inChan)
+
 	for _, input := range stores {
 		for input.More() {
 			data, err := input.Read()
@@ -106,6 +108,5 @@ func feed(stores []store.Store, inChan chan any) error {
 		}
 	}
 
-	close(inChan)
 	return nil
 }
