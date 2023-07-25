@@ -17,6 +17,11 @@ func (d Data) Key() string {
 	return d.Word
 }
 
+func (d Data) Serialize() ([]byte, error) {
+	bs, err := json.Marshal(d)
+	return bs, err
+}
+
 type WordcountProc struct{}
 
 func (w *WordcountProc) Map(in <-chan []byte, out chan<- gomr.Keyer) error {
@@ -66,5 +71,10 @@ func (w *WordcountProc) Reduce(in <-chan []byte, out chan<- any) error {
 func main() {
 	fmt.Println("Starting wordcount")
 
-	job := gomr.Job{}
+	job := gomr.Job{
+		Proc: &WordcountProc{},
+		Name: "wordcount",
+	}
+
+	gomr.
 }

@@ -15,6 +15,7 @@ type Processor interface {
 
 type Keyer interface {
 	Key() string
+	Serialize() ([]byte, error)
 }
 
 type Job struct {
