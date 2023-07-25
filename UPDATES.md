@@ -1,5 +1,20 @@
 ## Updates
 
+### July 25, 2023
+
+I am reworking the interface.
+As of now, it wasn't clear what data types the interface should deal with.
+I have settled on defining an interface type `gomr.Data`, that defines a `Key()` method as well as `Serialize` and `Deserialize`.
+A user will be able to supply their own implementation of this interface for both the input and intermediate data.
+These data types allow GoMR to move data around while remaining agnostic to the underlying implementation of the Data.
+
+I have written a wordcount example based on the new code base.
+In practice it looks very similar to the Tier1 unit tests, but interfaces with the system at the outer level.
+
+The next step is to figure out how data stores should operate.
+How should they be populated and communicated across machines?
+Who is responsible for creating and naming stores?
+
 ### July 21, 2023
 
 Implemented Tier 1 operations.
