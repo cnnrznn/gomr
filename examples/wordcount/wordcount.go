@@ -104,6 +104,7 @@ func main() {
 		Name: "wordcount",
 
 		InType:   Line{},
+		MidType:  Data{},
 		InStores: []store.Store{&inputStore},
 
 		Cluster: gomr.Cluster{
@@ -115,4 +116,6 @@ func main() {
 	}
 
 	fmt.Println(job)
+
+	job.MapReduce()
 }
