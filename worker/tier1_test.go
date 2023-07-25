@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -11,49 +12,77 @@ import (
 type TestProcessor struct {
 }
 
+type Line struct {
+	Payload string
+}
+
+func (l Line) Key() string                { return "" }
+func (l Line) Serialize() ([]byte, error) { return nil, nil }
+func (l Line) Deserialize(bs []byte) (gomr.Data, error) {
+	return Line{Payload: string(bs)}, nil
+}
+
 type Data struct {
-	key   string
-	count int
+	Word  string `json:"word"`
+	Count int    `json:"count"`
 }
 
 func (d Data) Key() string {
-	return d.key
+	return d.Word
+}
+func (d Data) Serialize() ([]byte, error) {
+	return json.Marshal(d)
+}
+func (d Data) Deserialize(bs []byte) (gomr.Data, error) {
+	data := Data{}
+	err := json.Unmarshal(bs, &data)
+	return data, err
 }
 
-func (t *TestProcessor) Map(in <-chan any, out chan<- gomr.Keyer) {
+func (t *TestProcessor) Map(in <-chan gomr.Data, out chan<- gomr.Data) error {
+	defer close(out)
 	for elem := range in {
-		data := Data{key: elem.(string), count: 1}
+		data := Data{Word: elem.Key(), Count: 1}
 		out <- data
 	}
-	close(out)
+
+	return nil
 }
 
-func (t *TestProcessor) Reduce(in <-chan any, out chan<- any) {
+func (t *TestProcessor) Reduce(in <-chan gomr.Data, out chan<- gomr.Data) error {
+	defer close(out)
+
 	sum := 0
 	key := ""
 
 	for elem := range in {
-		sum += elem.(Data).count
-		key = elem.(Data).key
+		sum += elem.(Data).Count
+		key = elem.(Data).Word
 	}
 
-	out <- Data{key: key, count: sum}
-	close(out)
+	out <- Data{Word: key, Count: sum}
+
+	return nil
 }
 
 func TestWorkerMap(t *testing.T) {
-	w := New(&TestProcessor{})
+	t1 := Tier1{
+		Job: gomr.Job{
+			Proc:   &TestProcessor{},
+			InType: Line{},
+		},
+	}
 
 	s := &store.MemStore{}
-	s.Write("this")
-	s.Write("is")
-	s.Write("a")
-	s.Write("word")
+	s.Write([]byte("this"))
+	s.Write([]byte("is"))
+	s.Write([]byte("a"))
+	s.Write([]byte("word"))
 
 	stores := []store.Store{}
 	stores = append(stores, s)
 
-	outs, err := w.transform(stores)
+	outs, err := t1.transform(stores)
 	if err != nil {
 		t.Error(err)
 	}
@@ -64,22 +93,30 @@ func TestWorkerMap(t *testing.T) {
 }
 
 func TestWorkerReduce(t *testing.T) {
-	w := New(&TestProcessor{})
+	t1 := Tier1{
+		Job: gomr.Job{
+			Proc:    &TestProcessor{},
+			MidType: Data{},
+		},
+	}
+
+	bs, _ := Data{Word: "is", Count: 1}.Serialize()
 
 	s := &store.MemStore{}
-	s.Write(Data{"is", 1})
-	s.Write(Data{"is", 1})
-	s.Write(Data{"is", 1})
+	for i := 0; i < 3; i++ {
+		s.Write(bs)
+	}
 
-	out, err := w.reduce([]store.Store{s})
+	out, err := t1.reduce([]store.Store{s})
 	if err != nil {
 		t.Error(err)
 	}
 
 	out.Init(store.Config{})
-	data, _ := out.Read()
+	bs, _ = out.Read()
+	data, _ := Data{}.Deserialize(bs)
 
-	if data.(Data).count != 3 {
-		t.Errorf("Expecting a count of 3, got %v", data.(Data).count)
+	if data.(Data).Count != 3 {
+		t.Errorf("Expecting a count of 3, got %v", data.(Data).Count)
 	}
 }

@@ -10,26 +10,20 @@ const (
 )
 
 type Tier1 struct {
-	Processor gomr.Processor
-}
-
-func New(p gomr.Processor) *Tier1 {
-	return &Tier1{
-		Processor: p,
-	}
+	Job gomr.Job
 }
 
 func (w *Tier1) transform(inputs []store.Store) ([]store.Store, error) {
 	var problem error
-	inChan := make(chan any, CHANBUF)
-	outChan := make(chan gomr.Keyer, CHANBUF)
+	inChan := make(chan gomr.Data, CHANBUF)
+	outChan := make(chan gomr.Data, CHANBUF)
 
 	outs := make(map[string]store.Store)
 
-	go w.Processor.Map(inChan, outChan)
+	go w.Job.Proc.Map(inChan, outChan)
 
 	go func() {
-		err := feed(inputs, inChan)
+		err := feed(inputs, inChan, w.Job.InType)
 		if err != nil {
 			problem = err
 		}
@@ -42,7 +36,12 @@ func (w *Tier1) transform(inputs []store.Store) ([]store.Store, error) {
 			outs[key] = &store.MemStore{}
 		}
 
-		err := outs[key].Write(row)
+		bs, err := row.Serialize()
+		if err != nil {
+			return nil, err
+		}
+
+		err = outs[key].Write(bs)
 		if err != nil {
 			problem = err
 			break
@@ -63,25 +62,30 @@ func (w *Tier1) transform(inputs []store.Store) ([]store.Store, error) {
 
 func (w *Tier1) reduce(inputs []store.Store) (store.Store, error) {
 	var problem error
-	inChan := make(chan any, CHANBUF)
-	outChan := make(chan any, CHANBUF)
+	inChan := make(chan gomr.Data, CHANBUF)
+	outChan := make(chan gomr.Data, CHANBUF)
 
 	result := &store.MemStore{}
 	result.Init(store.Config{
 		//Name: <name>
 	})
 
-	go w.Processor.Reduce(inChan, outChan)
+	go w.Job.Proc.Reduce(inChan, outChan)
 
 	go func() {
-		err := feed(inputs, inChan)
+		err := feed(inputs, inChan, w.Job.MidType)
 		if err != nil {
 			problem = err
 		}
 	}()
 
 	for row := range outChan {
-		err := result.Write(row)
+		bs, err := row.Serialize()
+		if err != nil {
+			return nil, err
+		}
+
+		err = result.Write(bs)
 		if err != nil {
 			return nil, err
 		}
@@ -94,12 +98,17 @@ func (w *Tier1) reduce(inputs []store.Store) (store.Store, error) {
 	return result, nil
 }
 
-func feed(stores []store.Store, inChan chan any) error {
+func feed(stores []store.Store, inChan chan gomr.Data, inType gomr.Data) error {
 	defer close(inChan)
 
 	for _, input := range stores {
 		for input.More() {
-			data, err := input.Read()
+			bs, err := input.Read()
+			if err != nil {
+				return err
+			}
+
+			data, err := inType.Deserialize(bs)
 			if err != nil {
 				return err
 			}
