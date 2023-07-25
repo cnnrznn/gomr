@@ -1,7 +1,7 @@
 package gomr
 
 type Mapper interface {
-	Map(in <-chan []byte, out chan<- Keyer) error
+	Map(in <-chan []byte, out chan<- Data) error
 }
 
 type Reducer interface {
@@ -13,9 +13,10 @@ type Processor interface {
 	Reducer
 }
 
-type Keyer interface {
+type Data interface {
 	Key() string
 	Serialize() ([]byte, error)
+	Deserialize([]byte) (Data, error)
 }
 
 type Job struct {
