@@ -1,11 +1,13 @@
 package gomr
 
+import "github.com/cnnrznn/gomr/store"
+
 type Mapper interface {
-	Map(in <-chan []byte, out chan<- Data) error
+	Map(in <-chan Data, out chan<- Data) error
 }
 
 type Reducer interface {
-	Reduce(in <-chan []byte, out chan<- any) error
+	Reduce(in <-chan Data, out chan<- Data) error
 }
 
 type Processor interface {
@@ -23,6 +25,14 @@ type Job struct {
 	Proc    Processor
 	Name    string
 	Cluster Cluster
+
+	// InType is used by the transformer to deserialize input data.
+	InType Data
+	// MidType is used by the reducer to deserialize shuffled data.
+	MidType Data
+
+	// InStore describes the input data stores consumed by this job.
+	InStores []store.Store
 
 	// other stuff in the future
 	// ex. Filesize int
