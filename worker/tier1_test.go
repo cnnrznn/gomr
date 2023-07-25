@@ -112,7 +112,6 @@ func TestWorkerReduce(t *testing.T) {
 		t.Error(err)
 	}
 
-	out.Init(store.Config{})
 	bs, _ = out.Read()
 	data, _ := Data{}.Deserialize(bs)
 

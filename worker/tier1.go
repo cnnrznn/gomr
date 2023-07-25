@@ -66,9 +66,6 @@ func (w *Tier1) reduce(inputs []store.Store) (store.Store, error) {
 	outChan := make(chan gomr.Data, CHANBUF)
 
 	result := &store.MemStore{}
-	result.Init(store.Config{
-		//Name: <name>
-	})
 
 	go w.Job.Proc.Reduce(inChan, outChan)
 

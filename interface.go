@@ -32,7 +32,7 @@ type Job struct {
 	MidType Data
 
 	// InStore describes the input data stores consumed by this job.
-	InStores []store.Store
+	Inputs []store.Config
 
 	// other stuff in the future
 	// ex. Filesize int

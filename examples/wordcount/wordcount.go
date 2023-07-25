@@ -87,25 +87,17 @@ func (w *WordcountProc) Reduce(in <-chan gomr.Data, out chan<- gomr.Data) error 
 func main() {
 	fmt.Println("Starting wordcount")
 
-	inputStore := store.MemStore{
-		Data: [][]byte{
-			[]byte(" these are words\n"),
-			[]byte("written on a page"),
-			[]byte("that no one will read"),
-		},
-	}
-	inputStore.Init(store.Config{
-		Name: "in1",
-		Node: "localhost:8080",
-	})
-
 	job := gomr.Job{
 		Proc: &WordcountProc{},
 		Name: "wordcount",
 
-		InType:   Line{},
-		MidType:  Data{},
-		InStores: []store.Store{&inputStore},
+		InType:  Line{},
+		MidType: Data{},
+		Inputs: []store.Config{
+			{
+				URL: "file:///tmp/data/input.txt",
+			},
+		},
 
 		Cluster: gomr.Cluster{
 			Nodes: []string{
