@@ -3,6 +3,7 @@ package worker
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/cnnrznn/gomr"
@@ -42,8 +43,11 @@ func (d Data) Deserialize(bs []byte) (gomr.Data, error) {
 func (t *TestProcessor) Map(in <-chan gomr.Data, out chan<- gomr.Data) error {
 	defer close(out)
 	for elem := range in {
-		data := Data{Word: elem.Key(), Count: 1}
-		out <- data
+		words := strings.Split(elem.(Line).Payload, " ")
+		for _, word := range words {
+			data := Data{Word: word, Count: 1}
+			out <- data
+		}
 	}
 
 	return nil
