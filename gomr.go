@@ -1,11 +1,11 @@
 package gomr
 
-import "github.com/cnnrznn/gomr/store"
-
 func (j Job) MapReduce() error {
 	// initialize data stores and storage server
-	storage := store.NewService()
-	go storage.ServeMapData()
+
+	// Transform all stores on our machine
+	// Shuffle outputs to appropriate machine
+	// Reduce all stores to a given Key
 
 	return nil
 }
