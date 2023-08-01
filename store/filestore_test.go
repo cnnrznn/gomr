@@ -16,9 +16,6 @@ func TestFileStore(t *testing.T) {
 		t.Error(err)
 	}
 	f.Close()
-	defer func() {
-		os.Remove(fs.filename)
-	}()
 
 	err = fs.Init()
 	if err != nil {
