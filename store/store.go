@@ -28,7 +28,7 @@ func Init(c Config) (Store, error) {
 func initFileStore(c Config) (Store, error) {
 	url, err := url.ParseRequestURI(c.URL)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 
 	local, err := IsLocal(c)
@@ -40,7 +40,7 @@ func initFileStore(c Config) (Store, error) {
 	}
 
 	return &FileStore{
-		Filename: url.Path,
+		filename: url.Path,
 	}, nil
 }
 

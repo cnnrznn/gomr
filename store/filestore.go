@@ -7,24 +7,31 @@ import (
 )
 
 type FileStore struct {
-	pointer  int
-	size     int
-	file     os.File
-	Filename string
+	pointer  int64
+	size     int64
+	file     *os.File
+	filename string
 }
 
 func (f *FileStore) Init() error {
+	file, err := os.OpenFile(f.filename, os.O_RDWR, 0)
+	if err != nil {
+		return fmt.Errorf("failed to open file: %v", err)
+	}
 
+	stat, err := os.Stat(f.filename)
+	if err != nil {
+		return err
+	}
+
+	f.file = file
+	f.pointer = 0
+	f.size = stat.Size()
+
+	return nil
 }
 
 func (f *FileStore) More() bool {
-	stat, err := f.file.Stat()
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	f.size = int(stat.Size())
-
 	if f.pointer < f.size {
 		return true
 	}
@@ -43,20 +50,20 @@ func (f *FileStore) Read() ([]byte, error) {
 	}
 
 	ls := strings.Split(string(buf[:n]), "\n")
-	offset := n - len([]byte(ls[0]))
+	offset := n - (len([]byte(ls[0])) + 1)
 
 	f.file.Seek(-1*int64(offset), 1)
-	f.pointer += len([]byte(ls[0]))
+	f.pointer += int64(len([]byte(ls[0])) + 1)
 
 	return []byte(ls[0]), nil
 }
 
 func (f *FileStore) Write(bs []byte) error {
-	n, err := f.file.Write(bs)
+	n, err := f.file.Write(append(bs, '\n'))
 	if err != nil {
 		return err
 	}
-	if n != len(bs) {
+	if n != len(bs)+1 {
 		return fmt.Errorf("couldn't write all bytes to file")
 	}
 
