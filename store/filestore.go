@@ -19,7 +19,7 @@ func (f *FileStore) Init() error {
 		return fmt.Errorf("failed to open file: %v", err)
 	}
 
-	stat, err := os.Stat(f.filename)
+	stat, err := file.Stat()
 	if err != nil {
 		return err
 	}
