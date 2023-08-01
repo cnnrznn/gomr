@@ -101,13 +101,11 @@ func main() {
 
 		Cluster: gomr.Cluster{
 			Nodes: []string{
-				"localhost:8080",
+				"localhost",
 			},
 			Self: 0,
 		},
 	}
-
-	fmt.Println(job)
 
 	job.MapReduce()
 }
