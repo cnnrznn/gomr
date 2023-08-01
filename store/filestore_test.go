@@ -15,8 +15,10 @@ func TestFileStore(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	f.Write([]byte("wow!\n"))
 	f.Close()
+	defer func() {
+		os.Remove(fs.filename)
+	}()
 
 	err = fs.Init()
 	if err != nil {
@@ -28,8 +30,13 @@ func TestFileStore(t *testing.T) {
 	fs.Write([]byte("This is a line"))
 	fs.Init()
 
+	lines := 0
 	for fs.More() {
-		bs, _ := fs.Read()
-		fmt.Println(string(bs))
+		fs.Read()
+		lines++
+	}
+
+	if lines != 3 {
+		t.Error(fmt.Errorf("Unexpected number of lines in file"))
 	}
 }
