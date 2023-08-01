@@ -3,12 +3,18 @@ package store
 import (
 	"fmt"
 	"os"
+	"strings"
 )
 
 type FileStore struct {
-	pointer int
-	size    int
-	file    os.File
+	pointer  int
+	size     int
+	file     os.File
+	Filename string
+}
+
+func (f *FileStore) Init() error {
+
 }
 
 func (f *FileStore) More() bool {
@@ -25,20 +31,24 @@ func (f *FileStore) More() bool {
 	return false
 }
 
-func (f *FileStore) Read(bs []byte) error {
+func (f *FileStore) Read() ([]byte, error) {
 	if !f.More() {
-		return fmt.Errorf("no more bytes to read")
+		return nil, fmt.Errorf("no more bytes to read")
 	}
 
-	n, err := f.file.Read(bs)
+	buf := make([]byte, 8192)
+	n, err := f.file.Read(buf)
 	if err != nil {
-		return err
-	}
-	if n != len(bs) {
-		return fmt.Errorf("Did not read entire buffer")
+		return nil, err
 	}
 
-	return nil
+	ls := strings.Split(string(buf[:n]), "\n")
+	offset := n - len([]byte(ls[0]))
+
+	f.file.Seek(-1*int64(offset), 1)
+	f.pointer += len([]byte(ls[0]))
+
+	return []byte(ls[0]), nil
 }
 
 func (f *FileStore) Write(bs []byte) error {

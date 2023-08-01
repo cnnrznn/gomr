@@ -26,6 +26,11 @@ func Init(c Config) (Store, error) {
 }
 
 func initFileStore(c Config) (Store, error) {
+	url, err := url.ParseRequestURI(c.URL)
+	if err != nil {
+		return false, err
+	}
+
 	local, err := IsLocal(c)
 	if err != nil {
 		return nil, err
@@ -34,7 +39,9 @@ func initFileStore(c Config) (Store, error) {
 		return nil, fmt.Errorf("File is not local")
 	}
 
-	return &FileStore{}, nil
+	return &FileStore{
+		Filename: url.Path,
+	}, nil
 }
 
 func IsLocal(c Config) (bool, error) {

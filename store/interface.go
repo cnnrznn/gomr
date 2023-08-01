@@ -2,6 +2,6 @@ package store
 
 type Store interface {
 	More() bool
-	Read([]byte) error
+	Read() ([]byte, error)
 	Write(bs []byte) error
 }
