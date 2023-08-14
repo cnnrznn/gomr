@@ -2,7 +2,6 @@ package worker
 
 import (
 	"encoding/json"
-	"fmt"
 	"strings"
 	"testing"
 
@@ -89,15 +88,12 @@ func TestWorkerMap(t *testing.T) {
 
 	output := &store.MemStore{}
 
-	stores := []store.Store{}
-	stores = append(stores, s)
-
-	err := t1.transform(stores, []store.Store{output})
+	err := t1.transform([]store.Store{s}, []store.Store{output})
 	if err != nil {
 		t.Error(err)
 	}
 
-	fmt.Println(output)
+	// TODO check the output is correct
 }
 
 func TestWorkerReduce(t *testing.T) {
