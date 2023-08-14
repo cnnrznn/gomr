@@ -1,5 +1,20 @@
 ## Updates
 
+### Aug 11, 2023
+
+To simplify the shuffle step, I am simplifying the data `Store`s created.
+
+After the transform step, one store will be created for each node in the cluster.
+The stores will then be shuffled, with the reducer pulling one file from each pier.
+Once all files are local, begin the reduce step.
+
+This will make the reduce step more complicated.
+Instead of providing a reducer with a list of stores that all contain the same key, we will provide the reducer Tier1
+a stream of `Data`s.
+The Tier1 layer will be responsible for spawning a new reducer `Processor` for each new key encountered.
+This comes with the downside that multiple reducers will be spawned and running concurrently, which will raise
+peak load on the machine.
+
 ### July 25, 2023
 
 I am reworking the interface.

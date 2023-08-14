@@ -42,3 +42,7 @@ type Cluster struct {
 	Nodes []string // <ip>:<port>
 	Self  int      // which index am I?
 }
+
+func (c Cluster) Size() int {
+	return len(c.Nodes)
+}

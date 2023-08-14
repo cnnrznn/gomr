@@ -74,6 +74,10 @@ func TestWorkerMap(t *testing.T) {
 		Job: gomr.Job{
 			Proc:   &TestProcessor{},
 			InType: Line{},
+			Cluster: gomr.Cluster{
+				Nodes: []string{"bs"},
+				Self:  0,
+			},
 		},
 	}
 
@@ -83,17 +87,17 @@ func TestWorkerMap(t *testing.T) {
 	s.Write([]byte("a"))
 	s.Write([]byte("word"))
 
+	output := &store.MemStore{}
+
 	stores := []store.Store{}
 	stores = append(stores, s)
 
-	outs, err := t1.transform(stores)
+	err := t1.transform(stores, []store.Store{output})
 	if err != nil {
 		t.Error(err)
 	}
 
-	for _, out := range outs {
-		fmt.Println(out)
-	}
+	fmt.Println(output)
 }
 
 func TestWorkerReduce(t *testing.T) {
@@ -101,6 +105,10 @@ func TestWorkerReduce(t *testing.T) {
 		Job: gomr.Job{
 			Proc:    &TestProcessor{},
 			MidType: Data{},
+			Cluster: gomr.Cluster{
+				Nodes: []string{"bs"},
+				Self:  0,
+			},
 		},
 	}
 
@@ -111,12 +119,14 @@ func TestWorkerReduce(t *testing.T) {
 		s.Write(bs)
 	}
 
-	out, err := t1.reduce([]store.Store{s})
+	output := &store.MemStore{}
+
+	err := t1.reduce([]store.Store{s}, output)
 	if err != nil {
 		t.Error(err)
 	}
 
-	bs, _ = out.Read()
+	bs, _ = output.Read()
 	data, _ := Data{}.Deserialize(bs)
 
 	if data.(Data).Count != 3 {

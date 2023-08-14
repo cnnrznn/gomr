@@ -1,6 +1,8 @@
 package worker
 
 import (
+	"hash/fnv"
+
 	"github.com/cnnrznn/gomr"
 	"github.com/cnnrznn/gomr/store"
 )
@@ -13,12 +15,10 @@ type Tier1 struct {
 	Job gomr.Job
 }
 
-func (w *Tier1) transform(inputs []store.Store) ([]store.Store, error) {
+func (w *Tier1) transform(inputs, outputs []store.Store) error {
 	var problem error
 	inChan := make(chan gomr.Data, CHANBUF)
 	outChan := make(chan gomr.Data, CHANBUF)
-
-	outs := make(map[string]store.Store)
 
 	go w.Job.Proc.Map(inChan, outChan)
 
@@ -31,17 +31,16 @@ func (w *Tier1) transform(inputs []store.Store) ([]store.Store, error) {
 
 	for row := range outChan {
 		key := row.Key()
-
-		if _, ok := outs[key]; !ok {
-			outs[key] = &store.MemStore{}
-		}
+		hash := fnv.New32()
+		hash.Write([]byte(key))
+		index := int(hash.Sum32()) % w.Job.Cluster.Size()
 
 		bs, err := row.Serialize()
 		if err != nil {
-			return nil, err
+			return err
 		}
 
-		err = outs[key].Write(bs)
+		err = outputs[index].Write(bs)
 		if err != nil {
 			problem = err
 			break
@@ -49,25 +48,17 @@ func (w *Tier1) transform(inputs []store.Store) ([]store.Store, error) {
 	}
 
 	if problem != nil {
-		return nil, problem
+		return problem
 	}
 
-	result := []store.Store{}
-	for _, s := range outs {
-		result = append(result, s)
-	}
-
-	return result, nil
+	return nil
 }
 
-func (w *Tier1) reduce(inputs []store.Store) (store.Store, error) {
+func (w *Tier1) reduce(inputs []store.Store, output store.Store) error {
 	var problem error
+	inChans := make(map[string]chan gomr.Data)
 	inChan := make(chan gomr.Data, CHANBUF)
 	outChan := make(chan gomr.Data, CHANBUF)
-
-	result := &store.MemStore{}
-
-	go w.Job.Proc.Reduce(inChan, outChan)
 
 	go func() {
 		err := feed(inputs, inChan, w.Job.MidType)
@@ -76,23 +67,36 @@ func (w *Tier1) reduce(inputs []store.Store) (store.Store, error) {
 		}
 	}()
 
+	go func() {
+		for data := range inChan {
+			key := data.Key()
+			if _, ok := inChans[key]; !ok {
+				ch := make(chan gomr.Data, CHANBUF)
+				defer close(ch)
+				inChans[key] = ch
+				go w.Job.Proc.Reduce(ch, outChan)
+			}
+			inChans[key] <- data
+		}
+	}()
+
 	for row := range outChan {
 		bs, err := row.Serialize()
 		if err != nil {
-			return nil, err
+			return err
 		}
 
-		err = result.Write(bs)
+		err = output.Write(bs)
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
 
 	if problem != nil {
-		return nil, problem
+		return problem
 	}
 
-	return result, nil
+	return nil
 }
 
 func feed(stores []store.Store, inChan chan gomr.Data, inType gomr.Data) error {
