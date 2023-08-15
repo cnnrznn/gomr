@@ -1,5 +1,18 @@
 ## Updates
 
+### Aug 15, 2023
+Happy birthday to me :) (Aug 12)
+
+Today I fixed a circular dependency needed to implement Tiers 2 and 3.
+I implemented the pre-shuffle work stage of Tier2.
+This means that the MapReduce job starts, finds all input data stores local to this worker, creates the intermediate data stores, and executes Tier1 on these inputs and outputs.
+
+Next up, I need to implement shuffle.
+I have tentatively decided that shuffle will be pull-based.
+Each reducer will query each pier in the cluster and ask for its transform output.
+I have also decided that each machine will create transform output for each other machine, even if the data store for that output is empty.
+The file should be transferred whether or not it contains data, reducing edge cases and simplifying code.
+
 ### Aug 11, 2023
 
 To simplify the shuffle step, I am simplifying the data `Store`s created.
