@@ -8,30 +8,27 @@ Tiers are central to the design of this system.
 Layers make it easy to separate problems into different related spaces.
 The tiers in GoMR are as follows:
 
-- Tier 0: User code
-- Tier 1: Intra-machine coordination
-- Tier 2: Inter-machine coordination
-- Tier 3: Application/Cluster coordination
+- Tier 0: User code. Operates on data
+- Tier 1: Executes Tier1. Interacts with data storage.
+- Tier 2: Executes Tier2. Moves data stores between machines.
+- Tier 3: Executes Tier3. API enty point.
 
 ### Tier 0
-
 User code operates on individual rows, and produces any number of output rows
-
 Mappers consume input rows and produce output elements with a key.
-
 Reducers consume all rows for a key and produce output(s) related to that key.
 
 ### Tier 1
-
-First level of GoMR code feeds data from the OS/filesystem to user code, and stores the output in files
+Tier 1 manages data flow between local data stores and Tier 0.
 
 ### Tier 2
-
-Second level moves files between machines. When map tasks have output all of their data, those outputs need to be sent to the appropriate reducer
+Tier 2 manages data flow between machines.
+Stores are created for transform output and shuffled between machines.
+Intermediate data is received for reduce.
 
 ### Tier 3
-
-Third level coordinates job initialization. User code needs to be sent to process on a server somehow
+Tier 3 is an entrypoint for a user (driver) program.
+Once the user defines their job, this layer provides the public API to initiate the job.
 
 ## Goals of a MapReduce system
 
