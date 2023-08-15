@@ -9,6 +9,16 @@ type MemStore struct {
 	curr int
 }
 
+func (m *MemStore) Init() error {
+	m.curr = 0
+
+	return nil
+}
+
+func (m *MemStore) Close() error {
+	return nil
+}
+
 func (m *MemStore) More() bool {
 	if m.curr < len(m.data) {
 		return true

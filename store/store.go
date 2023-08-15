@@ -11,6 +11,11 @@ type Config struct {
 	URL string // use net/url package
 }
 
+func (c Config) Url() *url.URL {
+	url, _ := url.ParseRequestURI(c.URL)
+	return url
+}
+
 func Init(c Config) (Store, error) {
 	url, err := url.ParseRequestURI(c.URL)
 	if err != nil {
@@ -40,7 +45,7 @@ func initFileStore(c Config) (Store, error) {
 	}
 
 	return &FileStore{
-		filename: url.Path,
+		Filename: url.Path,
 	}, nil
 }
 

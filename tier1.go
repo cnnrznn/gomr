@@ -1,9 +1,8 @@
-package worker
+package gomr
 
 import (
 	"hash/fnv"
 
-	"github.com/cnnrznn/gomr"
 	"github.com/cnnrznn/gomr/store"
 )
 
@@ -11,19 +10,15 @@ const (
 	CHANBUF = 1024
 )
 
-type Tier1 struct {
-	Job gomr.Job
-}
-
-func (w *Tier1) transform(inputs, outputs []store.Store) error {
+func (j *Job) transform(inputs, outputs []store.Store) error {
 	var problem error
-	inChan := make(chan gomr.Data, CHANBUF)
-	outChan := make(chan gomr.Data, CHANBUF)
+	inChan := make(chan Data, CHANBUF)
+	outChan := make(chan Data, CHANBUF)
 
-	go w.Job.Proc.Map(inChan, outChan)
+	go j.Proc.Map(inChan, outChan)
 
 	go func() {
-		err := feed(inputs, inChan, w.Job.InType)
+		err := feed(inputs, inChan, j.InType)
 		if err != nil {
 			problem = err
 		}
@@ -33,7 +28,7 @@ func (w *Tier1) transform(inputs, outputs []store.Store) error {
 		key := row.Key()
 		hash := fnv.New32()
 		hash.Write([]byte(key))
-		index := int(hash.Sum32()) % w.Job.Cluster.Size()
+		index := int(hash.Sum32()) % j.Cluster.Size()
 
 		bs, err := row.Serialize()
 		if err != nil {
@@ -54,14 +49,14 @@ func (w *Tier1) transform(inputs, outputs []store.Store) error {
 	return nil
 }
 
-func (w *Tier1) reduce(inputs []store.Store, output store.Store) error {
+func (j *Job) reduce(inputs []store.Store, output store.Store) error {
 	var problem error
-	inChans := make(map[string]chan gomr.Data)
-	inChan := make(chan gomr.Data, CHANBUF)
-	outChan := make(chan gomr.Data, CHANBUF)
+	inChans := make(map[string]chan Data)
+	inChan := make(chan Data, CHANBUF)
+	outChan := make(chan Data, CHANBUF)
 
 	go func() {
-		err := feed(inputs, inChan, w.Job.MidType)
+		err := feed(inputs, inChan, j.MidType)
 		if err != nil {
 			problem = err
 		}
@@ -71,10 +66,10 @@ func (w *Tier1) reduce(inputs []store.Store, output store.Store) error {
 		for data := range inChan {
 			key := data.Key()
 			if _, ok := inChans[key]; !ok {
-				ch := make(chan gomr.Data, CHANBUF)
+				ch := make(chan Data, CHANBUF)
 				defer close(ch)
 				inChans[key] = ch
-				go w.Job.Proc.Reduce(ch, outChan)
+				go j.Proc.Reduce(ch, outChan)
 			}
 			inChans[key] <- data
 		}
@@ -99,7 +94,7 @@ func (w *Tier1) reduce(inputs []store.Store, output store.Store) error {
 	return nil
 }
 
-func feed(stores []store.Store, inChan chan gomr.Data, inType gomr.Data) error {
+func feed(stores []store.Store, inChan chan Data, inType Data) error {
 	defer close(inChan)
 
 	for _, input := range stores {

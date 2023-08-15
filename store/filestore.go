@@ -10,11 +10,11 @@ type FileStore struct {
 	pointer  int64
 	size     int64
 	file     *os.File
-	filename string
+	Filename string
 }
 
 func (f *FileStore) Init() error {
-	file, err := os.OpenFile(f.filename, os.O_RDWR, 0)
+	file, err := os.OpenFile(f.Filename, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		return fmt.Errorf("failed to open file: %v", err)
 	}
@@ -29,6 +29,10 @@ func (f *FileStore) Init() error {
 	f.size = stat.Size()
 
 	return nil
+}
+
+func (f *FileStore) Close() error {
+	return f.file.Close()
 }
 
 func (f *FileStore) More() bool {

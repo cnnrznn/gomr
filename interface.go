@@ -30,6 +30,8 @@ type Job struct {
 	InType Data
 	// MidType is used by the reducer to deserialize shuffled data.
 	MidType Data
+	// OutType is used by the reducer to serialize output data.
+	OutType Data
 
 	// InStore describes the input data stores consumed by this job.
 	Inputs []store.Config

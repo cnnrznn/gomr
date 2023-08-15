@@ -1,11 +1,10 @@
-package worker
+package gomr
 
 import (
 	"encoding/json"
 	"strings"
 	"testing"
 
-	"github.com/cnnrznn/gomr"
 	"github.com/cnnrznn/gomr/store"
 )
 
@@ -18,33 +17,33 @@ type Line struct {
 
 func (l Line) Key() string                { return "" }
 func (l Line) Serialize() ([]byte, error) { return nil, nil }
-func (l Line) Deserialize(bs []byte) (gomr.Data, error) {
+func (l Line) Deserialize(bs []byte) (Data, error) {
 	return Line{Payload: string(bs)}, nil
 }
 
-type Data struct {
+type CountData struct {
 	Word  string `json:"word"`
 	Count int    `json:"count"`
 }
 
-func (d Data) Key() string {
+func (d CountData) Key() string {
 	return d.Word
 }
-func (d Data) Serialize() ([]byte, error) {
+func (d CountData) Serialize() ([]byte, error) {
 	return json.Marshal(d)
 }
-func (d Data) Deserialize(bs []byte) (gomr.Data, error) {
-	data := Data{}
+func (d CountData) Deserialize(bs []byte) (Data, error) {
+	data := CountData{}
 	err := json.Unmarshal(bs, &data)
 	return data, err
 }
 
-func (t *TestProcessor) Map(in <-chan gomr.Data, out chan<- gomr.Data) error {
+func (t *TestProcessor) Map(in <-chan Data, out chan<- Data) error {
 	defer close(out)
 	for elem := range in {
 		words := strings.Split(elem.(Line).Payload, " ")
 		for _, word := range words {
-			data := Data{Word: word, Count: 1}
+			data := CountData{Word: word, Count: 1}
 			out <- data
 		}
 	}
@@ -52,31 +51,29 @@ func (t *TestProcessor) Map(in <-chan gomr.Data, out chan<- gomr.Data) error {
 	return nil
 }
 
-func (t *TestProcessor) Reduce(in <-chan gomr.Data, out chan<- gomr.Data) error {
+func (t *TestProcessor) Reduce(in <-chan Data, out chan<- Data) error {
 	defer close(out)
 
 	sum := 0
 	key := ""
 
 	for elem := range in {
-		sum += elem.(Data).Count
-		key = elem.(Data).Word
+		sum += elem.(CountData).Count
+		key = elem.(CountData).Word
 	}
 
-	out <- Data{Word: key, Count: sum}
+	out <- CountData{Word: key, Count: sum}
 
 	return nil
 }
 
 func TestWorkerMap(t *testing.T) {
-	t1 := Tier1{
-		Job: gomr.Job{
-			Proc:   &TestProcessor{},
-			InType: Line{},
-			Cluster: gomr.Cluster{
-				Nodes: []string{"bs"},
-				Self:  0,
-			},
+	job := Job{
+		Proc:   &TestProcessor{},
+		InType: Line{},
+		Cluster: Cluster{
+			Nodes: []string{"bs"},
+			Self:  0,
 		},
 	}
 
@@ -88,7 +85,7 @@ func TestWorkerMap(t *testing.T) {
 
 	output := &store.MemStore{}
 
-	err := t1.transform([]store.Store{s}, []store.Store{output})
+	err := job.transform([]store.Store{s}, []store.Store{output})
 	if err != nil {
 		t.Error(err)
 	}
@@ -97,18 +94,16 @@ func TestWorkerMap(t *testing.T) {
 }
 
 func TestWorkerReduce(t *testing.T) {
-	t1 := Tier1{
-		Job: gomr.Job{
-			Proc:    &TestProcessor{},
-			MidType: Data{},
-			Cluster: gomr.Cluster{
-				Nodes: []string{"bs"},
-				Self:  0,
-			},
+	job := Job{
+		Proc:    &TestProcessor{},
+		MidType: CountData{},
+		Cluster: Cluster{
+			Nodes: []string{"bs"},
+			Self:  0,
 		},
 	}
 
-	bs, _ := Data{Word: "is", Count: 1}.Serialize()
+	bs, _ := CountData{Word: "is", Count: 1}.Serialize()
 
 	s := &store.MemStore{}
 	for i := 0; i < 3; i++ {
@@ -117,15 +112,15 @@ func TestWorkerReduce(t *testing.T) {
 
 	output := &store.MemStore{}
 
-	err := t1.reduce([]store.Store{s}, output)
+	err := job.reduce([]store.Store{s}, output)
 	if err != nil {
 		t.Error(err)
 	}
 
 	bs, _ = output.Read()
-	data, _ := Data{}.Deserialize(bs)
+	data, _ := CountData{}.Deserialize(bs)
 
-	if data.(Data).Count != 3 {
-		t.Errorf("Expecting a count of 3, got %v", data.(Data).Count)
+	if data.(CountData).Count != 3 {
+		t.Errorf("Expecting a count of 3, got %v", data.(CountData).Count)
 	}
 }

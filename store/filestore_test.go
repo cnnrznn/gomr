@@ -7,11 +7,14 @@ import (
 )
 
 func TestFileStore(t *testing.T) {
-	fs := &FileStore{
-		filename: "test.txt",
+	var fs Store
+	var fn string = "test.txt"
+
+	fs = &FileStore{
+		Filename: "test.txt",
 	}
 
-	f, err := os.OpenFile(fs.filename, os.O_CREATE|os.O_RDWR, 0666)
+	f, err := os.OpenFile(fn, os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
 		t.Error(err)
 	}

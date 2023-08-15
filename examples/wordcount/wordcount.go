@@ -95,7 +95,7 @@ func main() {
 		MidType: Data{},
 		Inputs: []store.Config{
 			{
-				URL: "file:///tmp/data/input.txt",
+				URL: "file:///tmp/input.txt",
 			},
 		},
 
@@ -107,5 +107,8 @@ func main() {
 		},
 	}
 
-	job.MapReduce()
+	err := job.MapReduce()
+	if err != nil {
+		fmt.Println(err)
+	}
 }
