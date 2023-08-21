@@ -5,8 +5,8 @@ func (j *Job) MapReduce() error {
 	if err != nil {
 		return err
 	}
-	//j.doShuffle()
-	//j.doReduce()
+	j.doShuffle()
+	j.doReduce()
 
 	return nil
 }
