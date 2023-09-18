@@ -1,5 +1,23 @@
 ## Updates
 
+### Sep 18, 2023
+I have committed some more time to finishing tier 2.
+Shuffle is now tested on a cluster of one machine.
+I had to take some time to clean up and robust-ify my 'goftp' library for use here.
+
+I moved creation and deletion of temporary folders to tier 2's entry point.
+At the end of invocation, only original data files and final results should remain on any machine.
+
+I had to change slightly the reduce API.
+Instead of reducer processors closing an output channel, they should signal a waitgroup that they are done.
+This makes it easier in tier 1 reduce to wait for all jobs to conclude.
+
+I have implemented tier 2's `doReduce()` routine.
+
+I'm a little fried from ~3 hours of coding.
+May make a longer writeup on the current state later.
+In any case, I plan on doing a retrospective once this project is more tested and I'm happy with the interface.
+
 ### Aug 15, 2023
 Happy birthday to me :) (Aug 12)
 
