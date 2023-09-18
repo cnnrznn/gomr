@@ -8,10 +8,10 @@ Tiers are central to the design of this system.
 Layers make it easy to separate problems into different related spaces.
 The tiers in GoMR are as follows:
 
-- Tier 0: User code. Operates on data
-- Tier 1: Executes Tier1. Interacts with data storage.
-- Tier 2: Executes Tier2. Moves data stores between machines.
-- Tier 3: Executes Tier3. API enty point.
+- Tier 0: User code. Operates on user-defined data.
+- Tier 1: Executes Tier0. Reads and writes data to local stores.
+- Tier 2: Executes Tier1. Manages local data stores. Transfers stores between machines.
+- Tier 3: Executes Tier2. API(Job) enty point.
 
 ### Tier 0
 User code operates on individual rows, and produces any number of output rows
