@@ -36,10 +36,7 @@ func (f *FileStore) Close() error {
 }
 
 func (f *FileStore) More() bool {
-	if f.pointer < f.size {
-		return true
-	}
-	return false
+	return f.pointer < f.size
 }
 
 func (f *FileStore) Read() ([]byte, error) {
