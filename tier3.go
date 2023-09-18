@@ -1,6 +1,8 @@
 package gomr
 
-import "os"
+import (
+	"os"
+)
 
 func (j *Job) MapReduce() error {
 	setup()
@@ -11,9 +13,15 @@ func (j *Job) MapReduce() error {
 		return err
 	}
 
-	j.doShuffle()
+	err = j.doShuffle()
+	if err != nil {
+		return err
+	}
 
-	j.doReduce()
+	err = j.doReduce()
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
