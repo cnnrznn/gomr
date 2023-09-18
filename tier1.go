@@ -2,6 +2,7 @@ package gomr
 
 import (
 	"hash/fnv"
+	"sync"
 
 	"github.com/cnnrznn/gomr/store"
 )
@@ -51,6 +52,7 @@ func (j *Job) transform(inputs, outputs []store.Store) error {
 
 func (j *Job) reduce(inputs []store.Store, output store.Store) error {
 	var problem error
+
 	inChans := make(map[string]chan Data)
 	inChan := make(chan Data, CHANBUF)
 	outChan := make(chan Data, CHANBUF)
@@ -63,16 +65,24 @@ func (j *Job) reduce(inputs []store.Store, output store.Store) error {
 	}()
 
 	go func() {
+		wg := sync.WaitGroup{}
+
 		for data := range inChan {
 			key := data.Key()
 			if _, ok := inChans[key]; !ok {
-				ch := make(chan Data, CHANBUF)
-				defer close(ch)
-				inChans[key] = ch
-				go j.Proc.Reduce(ch, outChan)
+				wg.Add(1)
+				inChans[key] = make(chan Data, CHANBUF)
+				go j.Proc.Reduce(inChans[key], outChan, &wg)
 			}
 			inChans[key] <- data
 		}
+
+		for _, ch := range inChans {
+			close(ch)
+		}
+
+		wg.Wait()
+		close(outChan)
 	}()
 
 	for row := range outChan {

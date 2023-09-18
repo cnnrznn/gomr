@@ -3,6 +3,7 @@ package gomr
 import (
 	"encoding/json"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/cnnrznn/gomr/store"
@@ -51,8 +52,8 @@ func (t *TestProcessor) Map(in <-chan Data, out chan<- Data) error {
 	return nil
 }
 
-func (t *TestProcessor) Reduce(in <-chan Data, out chan<- Data) error {
-	defer close(out)
+func (t *TestProcessor) Reduce(in <-chan Data, out chan<- Data, wg *sync.WaitGroup) error {
+	defer wg.Done()
 
 	sum := 0
 	key := ""
