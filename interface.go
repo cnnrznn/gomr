@@ -1,13 +1,17 @@
 package gomr
 
-import "github.com/cnnrznn/gomr/store"
+import (
+	"sync"
+
+	"github.com/cnnrznn/gomr/store"
+)
 
 type Mapper interface {
 	Map(in <-chan Data, out chan<- Data) error
 }
 
 type Reducer interface {
-	Reduce(in <-chan Data, out chan<- Data) error
+	Reduce(in <-chan Data, out chan<- Data, wg *sync.WaitGroup) error
 }
 
 type Processor interface {
