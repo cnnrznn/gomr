@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/cnnrznn/gomr"
 	"github.com/cnnrznn/gomr/store"
@@ -63,8 +64,8 @@ func (w *WordcountProc) Map(in <-chan gomr.Data, out chan<- gomr.Data) error {
 	return nil
 }
 
-func (w *WordcountProc) Reduce(in <-chan gomr.Data, out chan<- gomr.Data) error {
-	defer close(out)
+func (w *WordcountProc) Reduce(in <-chan gomr.Data, out chan<- gomr.Data, wg *sync.WaitGroup) error {
+	defer wg.Done()
 
 	count := 0
 	word := ""

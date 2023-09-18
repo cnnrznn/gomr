@@ -7,11 +7,32 @@ import (
 	"github.com/cnnrznn/gomr/store"
 )
 
+func (j *Job) doReduce() error {
+	inputs := make([]store.Store, j.Cluster.Size())
+	for i := 0; i < j.Cluster.Size(); i++ {
+		inputs[i] = &store.FileStore{Filename: fmt.Sprintf("%v/%v", DIR_POSTSHUFFLE, makeFN(i, j.Cluster.Self, j.Name))}
+		err := inputs[i].Init()
+		if err != nil {
+			return err
+		}
+		defer inputs[i].Close()
+	}
+
+	output := &store.FileStore{Filename: fmt.Sprintf("%v-out-%v", j.Name, j.Cluster.Self)}
+	err := output.Init()
+	if err != nil {
+		return err
+	}
+	defer output.Close()
+
+	return j.reduce(inputs, output)
+}
+
 func (j *Job) doMap() error {
 	// create stores for each reducer in cluster
 	midStores := make([]store.Store, j.Cluster.Size())
 	for i := 0; i < j.Cluster.Size(); i++ {
-		midStores[i] = &store.FileStore{Filename: makeFN(j.Cluster.Self, i, j.Name)}
+		midStores[i] = &store.FileStore{Filename: fmt.Sprintf("%v/%v", DIR_PRESHUFFLE, makeFN(j.Cluster.Self, i, j.Name))}
 		err := midStores[i].Init()
 		if err != nil {
 			return err
@@ -27,7 +48,7 @@ func (j *Job) doMap() error {
 		path := url.Path
 
 		switch host {
-		case "localhost", "127.0.0.1", "":
+		case "localhost", "127.0.0.1", "", j.Cluster.Nodes[j.Cluster.Self]:
 			st := &store.FileStore{Filename: path}
 			err := st.Init()
 			if err != nil {
@@ -55,35 +76,52 @@ func (j *Job) doMap() error {
 }
 
 func (j *Job) doShuffle() error {
-	// start server
-	go j.receive()
-	j.sendall()
+	errChan := make(chan error)
 
-	// for each pier, fetch the intermediate data meant for us
-	return fmt.Errorf("Not implemented")
+	go func() {
+		err := j.receive()
+		if err != nil {
+			errChan <- err
+		}
+		close(errChan)
+	}()
+
+	err := j.sendall()
+	if err != nil {
+		return err
+	}
+
+	for err := range errChan {
+		return err
+	}
+
+	return nil
 }
 
-func (j *Job) receive() {
-	// TODO create folder for received files
-
+func (j *Job) receive() error {
 	for i := range j.Cluster.Nodes {
-		ftp.ReceiveFile(ftp.Option{
+		err := ftp.ReceiveFile(ftp.Option{
 			Addr:     fmt.Sprintf(":%v", 3333),
-			Filename: makeFN(i, j.Cluster.Self, j.Name),
+			Filename: fmt.Sprintf("%v/%v", DIR_POSTSHUFFLE, makeFN(i, j.Cluster.Self, j.Name)),
 		})
+		if err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
-func (j *Job) sendall() {
+func (j *Job) sendall() error {
 	for i, node := range j.Cluster.Nodes {
-		ftp.SendFile(ftp.Option{
+		opt := ftp.Option{
 			Addr:     fmt.Sprintf("%v:3333", node),
-			Filename: makeFN(j.Cluster.Self, i, j.Name),
-		})
+			Filename: fmt.Sprintf("%v/%v", DIR_PRESHUFFLE, makeFN(j.Cluster.Self, i, j.Name)),
+			Retries:  3,
+		}
+		err := ftp.SendFile(opt)
+		if err != nil {
+			return err
+		}
 	}
-}
-
-func (j *Job) doReduce() error {
-	// feed the intermediate data generated on this machine and from every pier to tier1 reducer
-	return fmt.Errorf("Not implemented")
+	return nil
 }
