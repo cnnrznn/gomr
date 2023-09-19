@@ -73,7 +73,7 @@ func (w *WordcountProc) Reduce(in <-chan gomr.Data, out chan<- gomr.Data, wg *sy
 	for row := range in {
 		data := row.(Data)
 		if word != "" && word != data.Word {
-			return fmt.Errorf("Reducer supplied multiple keys")
+			return fmt.Errorf("reducer supplied multiple keys")
 		}
 
 		count += data.Count
