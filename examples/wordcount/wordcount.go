@@ -42,8 +42,8 @@ func (d Data) Deserialize(bs []byte) (gomr.Data, error) {
 
 type WordcountProc struct{}
 
-func (w *WordcountProc) Map(in <-chan gomr.Data, out chan<- gomr.Data) error {
-	defer close(out)
+func (w *WordcountProc) Map(in <-chan gomr.Data, out chan<- gomr.Data, wg *sync.WaitGroup) error {
+	defer wg.Done()
 
 	counts := make(map[string]int)
 

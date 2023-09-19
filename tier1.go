@@ -16,13 +16,21 @@ func (j *Job) transform(inputs, outputs []store.Store) error {
 	inChan := make(chan Data, CHANBUF)
 	outChan := make(chan Data, CHANBUF)
 
-	go j.Proc.Map(inChan, outChan)
+	wg := sync.WaitGroup{}
+
+	wg.Add(1)
+	go j.Proc.Map(inChan, outChan, &wg)
 
 	go func() {
 		err := feed(inputs, inChan, j.InType)
 		if err != nil {
 			problem = err
 		}
+	}()
+
+	go func() {
+		wg.Wait()
+		close(outChan)
 	}()
 
 	for row := range outChan {

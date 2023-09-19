@@ -7,7 +7,7 @@ import (
 )
 
 type Mapper interface {
-	Map(in <-chan Data, out chan<- Data) error
+	Map(in <-chan Data, out chan<- Data, wg *sync.WaitGroup) error
 }
 
 type Reducer interface {

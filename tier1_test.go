@@ -39,8 +39,9 @@ func (d CountData) Deserialize(bs []byte) (Data, error) {
 	return data, err
 }
 
-func (t *TestProcessor) Map(in <-chan Data, out chan<- Data) error {
-	defer close(out)
+func (t *TestProcessor) Map(in <-chan Data, out chan<- Data, wg *sync.WaitGroup) error {
+	defer wg.Done()
+
 	for elem := range in {
 		words := strings.Split(elem.(Line).Payload, " ")
 		for _, word := range words {
