@@ -1,7 +1,22 @@
 ## Updates
 
+### Sep 20, 2023
+
+Although the framework is in a working state, it is as it is now, practically unusable.
+This is for two reasons.
+First, there is no way to pass job parameters from the command line.
+In the future, one goal is to implement a utility routine for grabbing GoMR specific command line parameters.
+These can be things like the cluster definition, the size of intermittent data files, the number of map threads, etc.
+
+The second is a way of distributing and running a compiled GoMR application.
+Ideally, the user should be able to write their executable, compile it with the GoMR framework, then submit that executable to a cluster driver to be executed on all machines.
+To see this through, my goal is to implement another module, something like `gomr-driver`, which will include a driver and daemon programs for managing a cluster, distributing the GoMR executable, and running jobs.
+This library, as it is, is a data processor, but is kept simple deliberately to avoid combining two separate modules into one.
+This library is small and easy to comb through, and I like that.
+I will implement cluster management separately.
+
 ### Sep 18, 2023
-I have committed some more time to finishing tier 2.
+I have committed some more time to finishing tier 2 and 3.
 Shuffle is now tested on a cluster of one machine.
 I had to take some time to clean up and robust-ify my 'goftp' library for use here.
 
