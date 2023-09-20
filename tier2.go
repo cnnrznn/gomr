@@ -9,7 +9,7 @@ import (
 
 func (j *Job) doReduce() error {
 	inputs := make([]store.Store, j.Cluster.Size())
-	for i := 0; i < j.Cluster.Size(); i++ {
+	for i := range inputs {
 		inputs[i] = &store.FileStore{Filename: fmt.Sprintf("%v/%v", DIR_POSTSHUFFLE, makeFN(i, j.Cluster.Self, j.Name))}
 		err := inputs[i].Init()
 		if err != nil {
@@ -31,12 +31,13 @@ func (j *Job) doReduce() error {
 func (j *Job) doMap() error {
 	// create stores for each reducer in cluster
 	midStores := make([]store.Store, j.Cluster.Size())
-	for i := 0; i < j.Cluster.Size(); i++ {
+	for i := range midStores {
 		midStores[i] = &store.FileStore{Filename: fmt.Sprintf("%v/%v", DIR_PRESHUFFLE, makeFN(j.Cluster.Self, i, j.Name))}
 		err := midStores[i].Init()
 		if err != nil {
 			return err
 		}
+		defer midStores[i].Close()
 	}
 
 	// if an input is local, process it
@@ -54,25 +55,13 @@ func (j *Job) doMap() error {
 			if err != nil {
 				return err
 			}
+			defer st.Close()
 
 			localStores = append(localStores, st)
 		}
 	}
 
-	// push processing to lower tier
-	err := j.transform(localStores, midStores)
-	if err != nil {
-		return err
-	}
-
-	for _, st := range localStores {
-		st.Close()
-	}
-	for _, st := range midStores {
-		st.Close()
-	}
-
-	return nil
+	return j.transform(localStores, midStores)
 }
 
 func (j *Job) doShuffle() error {
@@ -124,4 +113,11 @@ func (j *Job) sendall() error {
 		}
 	}
 	return nil
+}
+
+func makeFN(
+	from, to int,
+	name string,
+) string {
+	return fmt.Sprintf("%v-%v-%v", name, from, to)
 }

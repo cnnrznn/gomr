@@ -18,6 +18,7 @@ func (j *Job) transform(inputs, outputs []store.Store) error {
 
 	wg := sync.WaitGroup{}
 
+	// TODO later, the number of goroutines can be increased to improve performance
 	wg.Add(1)
 	go j.Proc.Map(inChan, outChan, &wg)
 
@@ -51,11 +52,7 @@ func (j *Job) transform(inputs, outputs []store.Store) error {
 		}
 	}
 
-	if problem != nil {
-		return problem
-	}
-
-	return nil
+	return problem
 }
 
 func (j *Job) reduce(inputs []store.Store, output store.Store) error {
